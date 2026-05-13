@@ -384,10 +384,24 @@ def delete_expense(expense_id: int, session: SessionModel = Depends(get_current_
 
 
 @app.get("/api/analytics", response_model=AnalyticsSummary)
-def get_analytics(month: str | None = None, session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
+def get_analytics(month: str | None = None, period: str = "month", session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
     user_id = session.user.id
+    today = date.today()
 
-    if month:
+    if period == "7days":
+        start = datetime.combine(today - timedelta(days=6), datetime.min.time())
+        end = datetime.combine(today, datetime.max.time())
+        expenses = (
+            db.query(Expense)
+            .filter(Expense.user_id == user_id, Expense.date >= start, Expense.date <= end)
+            .all()
+        )
+        total = sum(e.amount_in_chf for e in expenses)
+        days_elapsed = 7
+        daily_average = total / days_elapsed
+        _, last_day = monthrange(today.year, today.month)
+        projected_monthly = daily_average * last_day
+    elif month:
         try:
             year, m = map(int, month.split("-"))
         except ValueError:
@@ -400,24 +414,23 @@ def get_analytics(month: str | None = None, session: SessionModel = Depends(get_
             .filter(Expense.user_id == user_id, Expense.date >= start, Expense.date <= end)
             .all()
         )
-        today = date.today()
         if year == today.year and m == today.month:
             days_elapsed = today.day
         else:
             days_elapsed = last_day
-        days_in_month = last_day
+        total = sum(e.amount_in_chf for e in expenses)
+        daily_average = total / max(days_elapsed, 1)
+        projected_monthly = daily_average * last_day
     else:
         expenses = db.query(Expense).filter(Expense.user_id == user_id).all()
         if expenses:
             earliest = min(e.date for e in expenses).date()
-            days_elapsed = (date.today() - earliest).days + 1
+            days_elapsed = (today - earliest).days + 1
         else:
             days_elapsed = 1
-        days_in_month = 30
-
-    total = sum(e.amount_in_chf for e in expenses)
-    daily_average = total / max(days_elapsed, 1)
-    projected_monthly = daily_average * days_in_month
+        total = sum(e.amount_in_chf for e in expenses)
+        daily_average = total / max(days_elapsed, 1)
+        projected_monthly = daily_average * 30
 
     settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     budget = settings.monthly_budget if settings else None

@@ -18,6 +18,15 @@ struct AnalyticsView: View {
                         monthNavigator
                     }
 
+                    if let summary = viewModel.summary, !viewModel.isLoading {
+                        HStack {
+                            Text("Total: CHF \(String(format: "%.2f", summary.total))")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(GTColor.accentCyan)
+                            Spacer()
+                        }
+                    }
+
                     if viewModel.isLoading {
                         ProgressView()
                             .tint(GTColor.accentCyan)
@@ -50,6 +59,9 @@ struct AnalyticsView: View {
             Task { await viewModel.load(api: api) }
         }
         .onChange(of: viewModel.isAllTime) {
+            Task { await viewModel.load(api: api) }
+        }
+        .onChange(of: viewModel.is7Days) {
             Task { await viewModel.load(api: api) }
         }
     }
@@ -185,6 +197,19 @@ struct AnalyticsView: View {
             }
 
             Divider().overlay(GTColor.borderSubtle)
+
+            HStack {
+                Text("Basis")
+                    .font(.system(size: 13))
+                    .foregroundStyle(GTColor.textSecondary)
+                Spacer()
+                Picker("", selection: $viewModel.is7Days) {
+                    Text("Monat").tag(false)
+                    Text("7 Tage").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+            }
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {

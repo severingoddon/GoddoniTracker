@@ -5,6 +5,8 @@ struct ExpenseListView: View {
     @Bindable var viewModel: ExpenseListViewModel
     var onEdit: (ExpenseModel) -> Void
 
+    @FocusState private var searchFocused: Bool
+
     var body: some View {
         VStack(spacing: 0) {
             searchBar
@@ -44,9 +46,22 @@ struct ExpenseListView: View {
             TextField("Ausgaben durchsuchen", text: $viewModel.searchText)
                 .foregroundStyle(GTColor.textPrimary)
                 .autocorrectionDisabled()
+                .focused($searchFocused)
+                .submitLabel(.search)
+                .onSubmit { searchFocused = false }
                 .onChange(of: viewModel.searchText) {
                     Task { await viewModel.search(api: api) }
                 }
+
+            if searchFocused {
+                Button {
+                    searchFocused = false
+                } label: {
+                    Text("Fertig")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(GTColor.accentCyan)
+                }
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -108,6 +123,7 @@ struct ExpenseListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private func dayHeader(day: DayGroup) -> some View {

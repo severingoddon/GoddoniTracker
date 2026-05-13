@@ -7,6 +7,7 @@ final class AnalyticsViewModel {
     var errorMessage: String?
     var currentMonth = Date()
     var isAllTime = false
+    var is7Days = false
 
     var monthLabel: String {
         currentMonth.monthYearString
@@ -18,6 +19,8 @@ final class AnalyticsViewModel {
         do {
             if isAllTime {
                 summary = try await api.getAnalytics()
+            } else if is7Days {
+                summary = try await api.getAnalytics(month: currentMonth.monthKey, period: "7days")
             } else {
                 summary = try await api.getAnalytics(month: currentMonth.monthKey)
             }

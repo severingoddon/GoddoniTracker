@@ -179,12 +179,11 @@ final class APIClient {
 
     // MARK: - Analytics
 
-    func getAnalytics(month: String? = nil) async throws -> AnalyticsSummary {
-        var queryItems: [URLQueryItem]? = nil
-        if let month {
-            queryItems = [URLQueryItem(name: "month", value: month)]
-        }
-        let request = try makeRequest("GET", path: APIEndpoints.analytics, queryItems: queryItems)
+    func getAnalytics(month: String? = nil, period: String? = nil) async throws -> AnalyticsSummary {
+        var queryItems: [URLQueryItem] = []
+        if let month { queryItems.append(URLQueryItem(name: "month", value: month)) }
+        if let period { queryItems.append(URLQueryItem(name: "period", value: period)) }
+        let request = try makeRequest("GET", path: APIEndpoints.analytics, queryItems: queryItems.isEmpty ? nil : queryItems)
         return try await perform(request)
     }
 
