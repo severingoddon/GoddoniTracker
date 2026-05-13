@@ -14,7 +14,8 @@ final class AnalyticsViewModel {
     }
 
     func load(api: APIClient) async {
-        isLoading = true
+        let hadData = summary != nil
+        if !hadData { isLoading = true }
         errorMessage = nil
         do {
             if isAllTime {

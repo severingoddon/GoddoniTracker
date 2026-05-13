@@ -3,7 +3,7 @@ import io
 import os
 import secrets
 from calendar import monthrange
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv

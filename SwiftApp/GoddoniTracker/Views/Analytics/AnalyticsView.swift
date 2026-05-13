@@ -27,11 +27,7 @@ struct AnalyticsView: View {
                         }
                     }
 
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .tint(GTColor.accentCyan)
-                            .padding(.top, 40)
-                    } else if let summary = viewModel.summary {
+                    if let summary = viewModel.summary {
                         if !summary.categories.isEmpty {
                             donutChart(categories: summary.categories)
                         }
@@ -39,6 +35,10 @@ struct AnalyticsView: View {
                         categoryList(categories: summary.categories)
 
                         budgetSection(summary: summary)
+                    } else if viewModel.isLoading {
+                        ProgressView()
+                            .tint(GTColor.accentCyan)
+                            .padding(.top, 40)
                     }
                 }
                 .padding(16)
