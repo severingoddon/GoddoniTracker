@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var showCategories = false
 
     var onLogout: () -> Void
+    var onDataChanged: (() -> Void)?
 
     var body: some View {
         ZStack {
@@ -119,6 +120,7 @@ struct SettingsView: View {
                     let data = try Data(contentsOf: url)
                     let response = try await api.importCSV(data: data, filename: url.lastPathComponent)
                     toast = ToastMessage(text: response.detail ?? "Import abgeschlossen", actionLabel: nil, action: nil)
+                    onDataChanged?()
                 } catch {
                     toast = ToastMessage(text: error.localizedDescription, actionLabel: nil, action: nil)
                 }

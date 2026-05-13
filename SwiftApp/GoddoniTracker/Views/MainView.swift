@@ -60,10 +60,15 @@ struct MainView: View {
         }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
-                SettingsView(onLogout: {
-                    showSettings = false
-                    authManager.logout()
-                })
+                SettingsView(
+                    onLogout: {
+                        showSettings = false
+                        authManager.logout()
+                    },
+                    onDataChanged: {
+                        Task { await expenseListVM.load(api: api) }
+                    }
+                )
             }
         }
         .onAppear {
