@@ -98,17 +98,6 @@ struct ExpenseFormView: View {
                                 .foregroundStyle(GTColor.textPrimary)
                         }
 
-                        HStack(spacing: 12) {
-                            formSection("Stadt") {
-                                TextField("Optional", text: $viewModel.city)
-                                    .foregroundStyle(GTColor.textPrimary)
-                            }
-                            formSection("Land") {
-                                TextField("Optional", text: $viewModel.country)
-                                    .foregroundStyle(GTColor.textPrimary)
-                            }
-                        }
-
                         formSection("Kommentar") {
                             TextField("Optional", text: $viewModel.comment)
                                 .foregroundStyle(GTColor.textPrimary)

@@ -10,8 +10,6 @@ struct ExpenseModel: Codable, Identifiable {
     let categoryId: Int?
     let categoryName: String?
     let paymentMethod: String?
-    let city: String?
-    let country: String?
     let comment: String?
 }
 
@@ -23,8 +21,6 @@ struct ExpenseCreate: Codable {
     let amountInChf: Double
     let categoryId: Int?
     let paymentMethod: String?
-    let city: String?
-    let country: String?
     let comment: String?
 }
 

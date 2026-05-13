@@ -1,13 +1,18 @@
 import Foundation
 
+enum AnalyticsPeriod: String, CaseIterable {
+    case month = "Monat"
+    case sevenDays = "7 Tage"
+    case allTime = "Gesamt"
+}
+
 @Observable
 final class AnalyticsViewModel {
     var summary: AnalyticsSummary?
     var isLoading = false
     var errorMessage: String?
     var currentMonth = Date()
-    var isAllTime = false
-    var is7Days = false
+    var period: AnalyticsPeriod = .month
 
     var monthLabel: String {
         currentMonth.monthYearString
@@ -18,11 +23,12 @@ final class AnalyticsViewModel {
         if !hadData { isLoading = true }
         errorMessage = nil
         do {
-            if isAllTime {
+            switch period {
+            case .allTime:
                 summary = try await api.getAnalytics()
-            } else if is7Days {
+            case .sevenDays:
                 summary = try await api.getAnalytics(month: currentMonth.monthKey, period: "7days")
-            } else {
+            case .month:
                 summary = try await api.getAnalytics(month: currentMonth.monthKey)
             }
         } catch {

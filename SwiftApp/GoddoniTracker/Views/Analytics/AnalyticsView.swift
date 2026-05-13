@@ -14,7 +14,7 @@ struct AnalyticsView: View {
                 VStack(spacing: 20) {
                     periodSelector
 
-                    if !viewModel.isAllTime {
+                    if viewModel.period == .month {
                         monthNavigator
                     }
 
@@ -58,10 +58,7 @@ struct AnalyticsView: View {
         .onChange(of: viewModel.currentMonth) {
             Task { await viewModel.load(api: api) }
         }
-        .onChange(of: viewModel.isAllTime) {
-            Task { await viewModel.load(api: api) }
-        }
-        .onChange(of: viewModel.is7Days) {
+        .onChange(of: viewModel.period) {
             Task { await viewModel.load(api: api) }
         }
     }
@@ -74,12 +71,13 @@ struct AnalyticsView: View {
 
             Spacer()
 
-            Picker("", selection: $viewModel.isAllTime) {
-                Text("Monat").tag(false)
-                Text("Gesamt").tag(true)
+            Picker("", selection: $viewModel.period) {
+                ForEach(AnalyticsPeriod.allCases, id: \.self) { period in
+                    Text(period.rawValue).tag(period)
+                }
             }
             .pickerStyle(.segmented)
-            .frame(width: 180)
+            .frame(width: 240)
         }
     }
 
@@ -138,7 +136,7 @@ struct AnalyticsView: View {
                     CategoryDetailView(
                         categoryId: cat.categoryId,
                         categoryName: cat.categoryName,
-                        month: viewModel.isAllTime ? nil : viewModel.currentMonth.monthKey
+                        month: viewModel.period == .allTime ? nil : viewModel.currentMonth.monthKey
                     )
                 } label: {
                     HStack {
@@ -197,19 +195,6 @@ struct AnalyticsView: View {
             }
 
             Divider().overlay(GTColor.borderSubtle)
-
-            HStack {
-                Text("Basis")
-                    .font(.system(size: 13))
-                    .foregroundStyle(GTColor.textSecondary)
-                Spacer()
-                Picker("", selection: $viewModel.is7Days) {
-                    Text("Monat").tag(false)
-                    Text("7 Tage").tag(true)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 160)
-            }
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {

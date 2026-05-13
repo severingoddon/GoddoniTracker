@@ -9,8 +9,6 @@ final class ExpenseFormViewModel {
     var selectedCategoryId: Int?
     var date = Date()
     var paymentMethod = ""
-    var city = ""
-    var country = ""
     var comment = ""
     var isSaving = false
     var errorMessage: String?
@@ -33,8 +31,6 @@ final class ExpenseFormViewModel {
         selectedCategoryId = expense.categoryId
         date = expense.date
         paymentMethod = expense.paymentMethod ?? ""
-        city = expense.city ?? ""
-        country = expense.country ?? ""
         comment = expense.comment ?? ""
     }
 
@@ -59,8 +55,6 @@ final class ExpenseFormViewModel {
             amountInChf: parsedCHF,
             categoryId: selectedCategoryId,
             paymentMethod: paymentMethod.isEmpty ? nil : paymentMethod,
-            city: city.isEmpty ? nil : city,
-            country: country.isEmpty ? nil : country,
             comment: comment.isEmpty ? nil : comment
         )
 

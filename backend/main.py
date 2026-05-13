@@ -235,8 +235,6 @@ def expense_to_response(expense: Expense) -> ExpenseResponse:
         category_id=expense.category_id,
         category_name=expense.category.name if expense.category else None,
         payment_method=expense.payment_method,
-        city=expense.city,
-        country=expense.country,
         comment=expense.comment,
     )
 
@@ -333,8 +331,6 @@ def create_expense(data: ExpenseCreate, session: SessionModel = Depends(get_curr
         amount_in_chf=data.amount_in_chf,
         category_id=data.category_id,
         payment_method=data.payment_method,
-        city=data.city,
-        country=data.country,
         comment=data.comment,
         user_id=session.user.id,
     )
@@ -362,8 +358,6 @@ def update_expense(expense_id: int, data: ExpenseCreate, session: SessionModel =
     expense.amount_in_chf = data.amount_in_chf
     expense.category_id = data.category_id
     expense.payment_method = data.payment_method
-    expense.city = data.city
-    expense.country = data.country
     expense.comment = data.comment
     db.commit()
     db.refresh(expense)
@@ -501,7 +495,7 @@ def export_csv(date_from: str | None = None, date_to: str | None = None, session
 
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";")
-    writer.writerow(["Title", "Date", "Amount", "Currency", "In CHF", "Category", "Payment Method", "City", "Country", "Comment"])
+    writer.writerow(["Title", "Date", "Amount", "Currency", "In CHF", "Category", "Payment Method", "Comment"])
 
     for e in expenses:
         writer.writerow([
@@ -512,8 +506,6 @@ def export_csv(date_from: str | None = None, date_to: str | None = None, session
             f"{e.amount_in_chf:.2f}",
             e.category.name if e.category else "",
             e.payment_method or "",
-            e.city or "",
-            e.country or "",
             e.comment or "",
         ])
 
@@ -581,8 +573,6 @@ async def import_csv(file: UploadFile = File(...), session: SessionModel = Depen
             amount_in_chf=amount_in_chf,
             category_id=category_id,
             payment_method=row.get("Payment Method", "").strip() or None,
-            city=row.get("City", "").strip() or None,
-            country=row.get("Country", "").strip() or None,
             comment=row.get("Comment", "").strip() or None,
             user_id=user_id,
         )

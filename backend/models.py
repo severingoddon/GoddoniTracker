@@ -49,8 +49,6 @@ class Expense(Base):
     amount_in_chf = Column(Float, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
     payment_method = Column(String, nullable=True)
-    city = Column(String, nullable=True)
-    country = Column(String, nullable=True)
     comment = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 

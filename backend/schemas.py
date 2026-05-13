@@ -41,8 +41,6 @@ class ExpenseCreate(BaseModel):
     amount_in_chf: float
     category_id: int | None = None
     payment_method: str | None = None
-    city: str | None = None
-    country: str | None = None
     comment: str | None = None
 
 
@@ -56,8 +54,6 @@ class ExpenseResponse(BaseModel):
     category_id: int | None
     category_name: str | None = None
     payment_method: str | None
-    city: str | None
-    country: str | None
     comment: str | None
 
     model_config = {"from_attributes": True}

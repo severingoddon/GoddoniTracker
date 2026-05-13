@@ -134,6 +134,9 @@ struct ExportSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var dateFrom = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var dateTo = Date()
+    @State private var isExporting = false
+    @State private var csvFileURL: URL?
+    @State private var showShare = false
 
     var body: some View {
         NavigationStack {
@@ -161,20 +164,25 @@ struct ExportSheet: View {
                             .labelsHidden()
                     }
 
-                    if let url = exportURL {
-                        ShareLink(item: url) {
-                            HStack {
+                    Button {
+                        Task { await generateCSV() }
+                    } label: {
+                        HStack {
+                            if isExporting {
+                                ProgressView().tint(.white)
+                            } else {
                                 Image(systemName: "square.and.arrow.up")
                                 Text("CSV exportieren")
                                     .font(.system(size: 16, weight: .semibold))
                             }
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(GTColor.accentCyan)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(GTColor.accentCyan)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .disabled(isExporting)
 
                     Spacer()
                 }
@@ -188,12 +196,69 @@ struct ExportSheet: View {
                         .foregroundStyle(GTColor.textSecondary)
                 }
             }
+            .sheet(isPresented: $showShare) {
+                if let url = csvFileURL {
+                    ShareSheet(url: url)
+                }
+            }
         }
     }
 
-    private var exportURL: URL? {
+    private func generateCSV() async {
+        isExporting = true
         let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        return api.getExportURL(dateFrom: fmt.string(from: dateFrom), dateTo: fmt.string(from: dateTo))
+        fmt.dateFormat = "yyyy-MM"
+
+        var allExpenses: [ExpenseModel] = []
+        let startMonth = Calendar.current.dateComponents([.year, .month], from: dateFrom)
+        let endMonth = Calendar.current.dateComponents([.year, .month], from: dateTo)
+        var current = Calendar.current.date(from: startMonth)!
+        let end = Calendar.current.date(from: endMonth)!
+
+        while current <= end {
+            let monthKey = fmt.string(from: current)
+            if let data = try? await api.getExpenses(month: monthKey) {
+                for day in data.days {
+                    for expense in day.expenses {
+                        if expense.date >= dateFrom && expense.date <= Calendar.current.date(bySettingHour: 23, minute: 59, second: 59, of: dateTo)! {
+                            allExpenses.append(expense)
+                        }
+                    }
+                }
+            }
+            current = Calendar.current.date(byAdding: .month, value: 1, to: current)!
+        }
+
+        let dateFmt = DateFormatter()
+        dateFmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
+
+        var csv = "Title;Date;Amount;Currency;In CHF;Category;Payment Method;Comment\n"
+        for e in allExpenses.sorted(by: { $0.date > $1.date }) {
+            let line = [
+                e.title,
+                dateFmt.string(from: e.date),
+                String(format: "%.2f", e.amount),
+                e.currency,
+                String(format: "%.2f", e.amountInChf),
+                e.categoryName ?? "",
+                e.paymentMethod ?? "",
+                e.comment ?? "",
+            ].joined(separator: ";")
+            csv += line + "\n"
+        }
+
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("expenses.csv")
+        try? csv.write(to: tempURL, atomically: true, encoding: .utf8)
+        csvFileURL = tempURL
+        isExporting = false
+        showShare = true
     }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
