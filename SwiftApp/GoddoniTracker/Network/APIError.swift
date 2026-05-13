@@ -10,7 +10,7 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Ungueltige URL"
+            return "Ungültige URL"
         case .unauthorized:
             return "Nicht autorisiert"
         case .serverError(let code, let detail):

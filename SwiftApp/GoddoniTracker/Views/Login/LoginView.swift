@@ -24,7 +24,7 @@ struct LoginView: View {
                     Text("GoddoniTracker")
                         .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(GTColor.gradient)
-                    Text("Behalte den Ueberblick\nueber deine Ausgaben.")
+                    Text("Behalte den Überblick\nüber deine Ausgaben.")
                         .font(.system(size: 15))
                         .foregroundStyle(GTColor.textSecondary)
                         .multilineTextAlignment(.center)

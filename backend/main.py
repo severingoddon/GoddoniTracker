@@ -530,9 +530,14 @@ async def import_csv(file: UploadFile = File(...), session: SessionModel = Depen
             continue
 
         date_str = row.get("Date", "").strip()
-        try:
-            expense_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
+        expense_date = None
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%d.%m.%y", "%d.%m.%Y", "%Y-%m-%d"):
+            try:
+                expense_date = datetime.strptime(date_str, fmt)
+                break
+            except ValueError:
+                continue
+        if not expense_date:
             try:
                 expense_date = datetime.fromisoformat(date_str)
             except ValueError:

@@ -3,24 +3,34 @@
   hosts: raspi
   vars:
     project_dir: ~/GoddoniTracker/GoddoniTracker
+    repo_url: https://github.com/severingoddon/GoddoniTracker.git
 
   tasks:
+    - name: Clone repo if not present
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ project_dir }}"
+        version: main
+      register: git_clone
+      ignore_errors: true
+
     - name: Pull latest code
       ansible.builtin.command: git pull
       args:
         chdir: "{{ project_dir }}"
+      when: git_clone is failed
 
     - name: Stop containers
       community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         state: absent
 
-    - name: Remove all Docker images
-      ansible.builtin.shell: docker rmi $(docker images -q) 2>/dev/null || true
+    - name: Remove GoddoniTracker images
+      ansible.builtin.shell: docker images --filter "reference=*goddonitracker*" -q | xargs -r docker rmi -f 2>/dev/null || true
       changed_when: false
 
-    - name: Remove all Docker volumes
-      ansible.builtin.shell: docker volume rm $(docker volume ls -q) 2>/dev/null || true
+    - name: Remove GoddoniTracker volumes
+      ansible.builtin.shell: docker volume ls -q --filter "name=goddonitracker" | xargs -r docker volume rm 2>/dev/null || true
       changed_when: false
 
     - name: Build from scratch

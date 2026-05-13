@@ -86,12 +86,20 @@ Prerequisites on your local machine:
 - SSH key on the Raspi: `ssh-copy-id pi@<RASPI_IP>`
 - Key loaded in agent (if passphrase): `ssh-add ~/.ssh/id_ed25519`
 
-Deploy:
+First-time setup on the Raspi:
+```bash
+ssh pi@<RASPI_IP>
+mkdir -p ~/GoddoniTracker/Certs
+cd ~/GoddoniTracker
+git clone https://github.com/severingoddon/GoddoniTracker.git GoddoniTracker
+```
+
+Deploy (from your Mac):
 ```bash
 ansible-playbook ansible/deploy.yml -i ansible/inventory.ini
 ```
 
-This will pull the latest code on the Raspi, rebuild all Docker images from scratch, and restart the containers.
+This will clone/pull the latest code on the Raspi, rebuild all Docker images from scratch, and restart the containers.
 
 ### Cloudflare DNS
 

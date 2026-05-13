@@ -31,7 +31,7 @@ struct ExpenseFormView: View {
                                     .foregroundStyle(GTColor.textPrimary)
                             }
 
-                            formSection("Waehrung") {
+                            formSection("Währung") {
                                 Picker("", selection: $viewModel.currency) {
                                     Text("CHF").tag("CHF")
                                     Text("EUR").tag("EUR")

@@ -97,7 +97,7 @@ struct ExpenseListView: View {
                                 Button(role: .destructive) {
                                     Task { _ = await viewModel.deleteExpense(expense.id, api: api) }
                                 } label: {
-                                    Label("Loeschen", systemImage: "trash")
+                                    Label("Löschen", systemImage: "trash")
                                 }
                             }
                     }

@@ -40,7 +40,7 @@ struct CategoryManagementView: View {
                                     }
                                 }
                             } label: {
-                                Label("Loeschen", systemImage: "trash")
+                                Label("Löschen", systemImage: "trash")
                             }
                         }
                     }
