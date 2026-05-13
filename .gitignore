@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.db
+venv/
+.env
+.idea/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+.DS_Store
