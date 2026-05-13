@@ -85,15 +85,15 @@ struct ExpenseListView: View {
     }
 
     private func expenseList(data: MonthExpenses) -> some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(data.days) { day in
-                    dayHeader(day: day)
-
+        List {
+            ForEach(data.days) { day in
+                Section {
                     ForEach(day.expenses) { expense in
                         ExpenseRowView(expense: expense)
+                            .listRowBackground(GTColor.bgDeepest)
+                            .contentShape(Rectangle())
                             .onTapGesture { onEdit(expense) }
-                            .swipeActions(edge: .trailing) {
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     Task { _ = await viewModel.deleteExpense(expense.id, api: api) }
                                 } label: {
@@ -101,10 +101,13 @@ struct ExpenseListView: View {
                                 }
                             }
                     }
+                } header: {
+                    dayHeader(day: day)
                 }
             }
-            .padding(.horizontal, 16)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     private func dayHeader(day: DayGroup) -> some View {

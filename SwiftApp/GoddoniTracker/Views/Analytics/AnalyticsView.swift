@@ -122,18 +122,30 @@ struct AnalyticsView: View {
     private func categoryList(categories: [CategoryBreakdown]) -> some View {
         VStack(spacing: 0) {
             ForEach(categories) { cat in
-                HStack {
-                    Text(cat.categoryName)
-                        .font(.system(size: 15))
-                        .foregroundStyle(GTColor.textPrimary)
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("CHF \(String(format: "%.2f", cat.total))")
-                            .font(.system(size: 15, weight: .semibold))
+                NavigationLink {
+                    CategoryDetailView(
+                        categoryId: cat.categoryId,
+                        categoryName: cat.categoryName,
+                        month: viewModel.isAllTime ? nil : viewModel.currentMonth.monthKey
+                    )
+                } label: {
+                    HStack {
+                        Text(cat.categoryName)
+                            .font(.system(size: 15))
                             .foregroundStyle(GTColor.textPrimary)
-                        Text("\(String(format: "%.1f", cat.percentage))%")
+
+                        Spacer()
+
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("CHF \(String(format: "%.2f", cat.total))")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(GTColor.textPrimary)
+                            Text("\(String(format: "%.1f", cat.percentage))%")
+                                .font(.system(size: 12))
+                                .foregroundStyle(GTColor.textMuted)
+                        }
+
+                        Image(systemName: "chevron.right")
                             .font(.system(size: 12))
                             .foregroundStyle(GTColor.textMuted)
                     }

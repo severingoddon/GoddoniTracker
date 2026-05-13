@@ -6,19 +6,10 @@
     repo_url: https://github.com/severingoddon/GoddoniTracker.git
 
   tasks:
-    - name: Clone repo if not present
-      ansible.builtin.git:
-        repo: "{{ repo_url }}"
-        dest: "{{ project_dir }}"
-        version: main
-      register: git_clone
-      ignore_errors: true
-
     - name: Pull latest code
       ansible.builtin.command: git pull
       args:
         chdir: "{{ project_dir }}"
-      when: git_clone is failed
 
     - name: Stop containers
       community.docker.docker_compose_v2:

@@ -242,7 +242,7 @@ def expense_to_response(expense: Expense) -> ExpenseResponse:
 
 
 @app.get("/api/expenses", response_model=MonthExpenses)
-def get_expenses(month: str | None = None, session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
+def get_expenses(month: str | None = None, category_id: int | None = None, session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
     user_id = session.user.id
 
     if month:
@@ -258,12 +258,11 @@ def get_expenses(month: str | None = None, session: SessionModel = Depends(get_c
     _, last_day = monthrange(year, m)
     end = datetime(year, m, last_day, 23, 59, 59)
 
-    expenses = (
-        db.query(Expense)
-        .filter(Expense.user_id == user_id, Expense.date >= start, Expense.date <= end)
-        .order_by(Expense.date.desc())
-        .all()
-    )
+    query = db.query(Expense).filter(Expense.user_id == user_id, Expense.date >= start, Expense.date <= end)
+    if category_id is not None:
+        query = query.filter(Expense.category_id == category_id)
+
+    expenses = query.order_by(Expense.date.desc()).all()
 
     all_time_total = (
         db.query(func.sum(Expense.amount_in_chf))

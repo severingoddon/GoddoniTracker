@@ -8,9 +8,12 @@ struct ExpenseFormView: View {
     @State private var categories: [CategoryModel] = []
     @State private var showNewCategory = false
     @State private var newCategoryName = ""
+    @State private var showDeleteConfirm = false
+    @FocusState private var amountFocused: Bool
 
     var expense: ExpenseModel?
     var onSaved: () -> Void
+    var onDeleted: (() -> Void)?
 
     var body: some View {
         NavigationStack {
@@ -29,6 +32,7 @@ struct ExpenseFormView: View {
                                 TextField("0.00", text: $viewModel.amount)
                                     .keyboardType(.decimalPad)
                                     .foregroundStyle(GTColor.textPrimary)
+                                    .focused($amountFocused)
                             }
 
                             formSection("Währung") {
@@ -54,16 +58,23 @@ struct ExpenseFormView: View {
 
                         formSection("Kategorie") {
                             HStack {
-                                Picker("", selection: $viewModel.selectedCategoryId) {
-                                    Text("Keine").tag(nil as Int?)
+                                Menu {
+                                    Button("Keine") { viewModel.selectedCategoryId = nil }
                                     ForEach(categories) { cat in
-                                        Text(cat.name).tag(cat.id as Int?)
+                                        Button(cat.name) { viewModel.selectedCategoryId = cat.id }
                                     }
+                                } label: {
+                                    HStack {
+                                        Text(selectedCategoryName)
+                                            .foregroundStyle(GTColor.accentCyan)
+                                            .lineLimit(1)
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(GTColor.accentCyan)
+                                        Spacer()
+                                    }
+                                    .contentShape(Rectangle())
                                 }
-                                .pickerStyle(.menu)
-                                .tint(GTColor.accentCyan)
-
-                                Spacer()
 
                                 Button {
                                     showNewCategory = true
@@ -79,6 +90,7 @@ struct ExpenseFormView: View {
                                 .datePickerStyle(.compact)
                                 .tint(GTColor.accentCyan)
                                 .labelsHidden()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
                         formSection("Zahlungsmethode") {
@@ -134,6 +146,10 @@ struct ExpenseFormView: View {
                     }
                     .padding(16)
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
             }
             .navigationTitle(viewModel.isEditing ? "Ausgabe bearbeiten" : "Neue Ausgabe")
             .navigationBarTitleDisplayMode(.inline)
@@ -142,10 +158,30 @@ struct ExpenseFormView: View {
                     Button("Abbrechen") { dismiss() }
                         .foregroundStyle(GTColor.textSecondary)
                 }
+                if viewModel.isEditing {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showDeleteConfirm = true } label: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(GTColor.accentRed)
+                        }
+                    }
+                }
+            }
+            .confirmationDialog("Ausgabe löschen?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Löschen", role: .destructive) {
+                    if let id = expense?.id {
+                        Task {
+                            try? await api.deleteExpense(id)
+                            onDeleted?()
+                        }
+                    }
+                }
             }
             .onAppear {
                 if let expense {
                     viewModel.populate(from: expense)
+                } else {
+                    amountFocused = true
                 }
                 Task {
                     categories = (try? await api.getCategories()) ?? []
@@ -165,6 +201,13 @@ struct ExpenseFormView: View {
                 Button("Abbrechen", role: .cancel) { newCategoryName = "" }
             }
         }
+    }
+
+    private var selectedCategoryName: String {
+        if let id = viewModel.selectedCategoryId, let cat = categories.first(where: { $0.id == id }) {
+            return cat.name
+        }
+        return "Keine"
     }
 
     private func formSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

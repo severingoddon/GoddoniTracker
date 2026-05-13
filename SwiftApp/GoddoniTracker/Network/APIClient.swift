@@ -141,12 +141,11 @@ final class APIClient {
 
     // MARK: - Expenses
 
-    func getExpenses(month: String? = nil) async throws -> MonthExpenses {
-        var queryItems: [URLQueryItem]? = nil
-        if let month {
-            queryItems = [URLQueryItem(name: "month", value: month)]
-        }
-        let request = try makeRequest("GET", path: APIEndpoints.expenses, queryItems: queryItems)
+    func getExpenses(month: String? = nil, categoryId: Int? = nil) async throws -> MonthExpenses {
+        var queryItems: [URLQueryItem] = []
+        if let month { queryItems.append(URLQueryItem(name: "month", value: month)) }
+        if let categoryId { queryItems.append(URLQueryItem(name: "category_id", value: String(categoryId))) }
+        let request = try makeRequest("GET", path: APIEndpoints.expenses, queryItems: queryItems.isEmpty ? nil : queryItems)
         return try await perform(request)
     }
 

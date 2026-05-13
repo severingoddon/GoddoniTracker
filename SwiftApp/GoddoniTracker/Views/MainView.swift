@@ -44,6 +44,12 @@ struct MainView: View {
                     editingExpense = nil
                     Task { await expenseListVM.load(api: api) }
                     toast = ToastMessage(text: "Ausgabe gespeichert", actionLabel: nil, action: nil)
+                },
+                onDeleted: {
+                    showAddExpense = false
+                    editingExpense = nil
+                    Task { await expenseListVM.load(api: api) }
+                    toast = ToastMessage(text: "Ausgabe gelöscht", actionLabel: nil, action: nil)
                 }
             )
         }
