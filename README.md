@@ -1,27 +1,30 @@
 # GoddoniTracker
 
-A personal expense tracking application. Track daily expenses, analyze spending by category, set monthly budgets, and export/import data via CSV.
+A personal expense tracking application. Track daily expenses, analyze spending by category, set monthly budgets with visual projections, and export/import data via CSV.
 
 ## Features
 
-- **Expense tracking** — log expenses with title, amount, currency, category, payment method, location, and comments
+- **Expense tracking** — log expenses with title, amount, currency, category, payment method, and comments
 - **Monthly view** — expenses grouped by day with daily and monthly totals
-- **Search** — find expenses by title or comment
-- **Categories** — customizable categories with emoji support, drag-to-reorder
-- **Analytics** — donut chart breakdown by category, daily average, monthly projection
+- **Swipe to delete** — swipe left on any expense to delete, or use the trash icon when editing
+- **Search** — find expenses by title or comment, dismiss keyboard with "Fertig" button
+- **Categories** — customizable categories with emoji support, drag-to-reorder, per-user
+- **Category drill-down** — tap a category in analytics to see all its expenses
+- **Analytics** — donut chart breakdown by category, three time periods: Monat / 7 Tage / Gesamt
 - **Budget tracking** — set a monthly budget, track usage percentage, see projected overspend
-- **CSV export** — export expenses for any date range as semicolon-separated CSV
-- **CSV import** — import expenses from CSV with automatic category creation
+- **Budget chart** — expandable cumulative spending chart vs. budget path with daily projection
+- **CSV export** — export expenses for any date range, generated client-side via iOS share sheet
+- **CSV import** — import expenses from CSV with automatic category creation (supports DD.MM.YY, DD.MM.YYYY, YYYY-MM-DD formats)
 - **Multi-currency** — track amounts in any currency with CHF conversion
-- **Google OAuth** — login via Google account
+- **Multi-user** — each user has their own categories, expenses, and settings (Google OAuth)
 - **Dark mode** — dark theme throughout
-- **German UI** — all interface text in German
+- **German UI** — all interface text in German, code in English
 
 ## Tech Stack
 
 | Layer    | Technology                                        |
 |----------|---------------------------------------------------|
-| iOS      | SwiftUI, Observation (`@Observable`), async/await, zero dependencies |
+| iOS      | SwiftUI, Swift Charts, Observation (`@Observable`), async/await, zero dependencies |
 | Backend  | Python 3.12, FastAPI, SQLAlchemy, Pydantic, Authlib |
 | Database | SQLite                                            |
 | Server   | Nginx (SSL reverse proxy), Uvicorn                |
@@ -94,22 +97,32 @@ cd ~/GoddoniTracker
 git clone https://github.com/severingoddon/GoddoniTracker.git GoddoniTracker
 ```
 
+Copy the `.env` file (not in git):
+```bash
+scp backend/.env pi@<RASPI_IP>:~/GoddoniTracker/GoddoniTracker/backend/.env
+```
+
 Deploy (from your Mac):
 ```bash
+cd /Users/severingoddon/Desktop/docs/Coding/PycharmProjects/GoddoniTracker
 ansible-playbook ansible/deploy.yml -i ansible/inventory.ini
 ```
 
-This will clone/pull the latest code on the Raspi, rebuild all Docker images from scratch, and restart the containers.
+This pulls the latest code on the Raspi, rebuilds GoddoniTracker Docker images (without affecting WeekBite), and restarts the containers.
 
 ### Cloudflare DNS
 
-Add an A record or CNAME for `goddonitracker.goddoni.org` pointing to the Raspberry Pi's public IP. The app is served on port `3004` via Nginx with SSL.
+CNAME record for `goddonitracker` pointing to `vpn.goddoni.org` (DNS only, no proxy). The app is served on port `3004` via Nginx with SSL.
 
 ### SSL Certificates
 
-Place your SSL certificates at `/home/pi/GoddoniTracker/Certs/` on the Raspberry Pi:
-- `fullchain.pem`
-- `privkey.pem`
+Generated with Let's Encrypt:
+```bash
+sudo certbot certonly --standalone -d goddonitracker.goddoni.org
+sudo cp /etc/letsencrypt/live/goddonitracker.goddoni.org/fullchain.pem ~/GoddoniTracker/Certs/
+sudo cp /etc/letsencrypt/live/goddonitracker.goddoni.org/privkey.pem ~/GoddoniTracker/Certs/
+sudo chown pi:pi ~/GoddoniTracker/Certs/*.pem
+```
 
 ## API Endpoints
 
@@ -125,14 +138,14 @@ All other endpoints require `Authorization: Bearer <token>` header.
 
 ### Expenses
 
-| Method | Endpoint                      | Description                                    |
-|--------|-------------------------------|------------------------------------------------|
-| GET    | `/api/expenses?month=YYYY-MM` | List expenses for a month, grouped by day      |
-| GET    | `/api/expenses/{id}`          | Get a single expense                           |
-| POST   | `/api/expenses`               | Create an expense                              |
-| PUT    | `/api/expenses/{id}`          | Update an expense                              |
-| DELETE | `/api/expenses/{id}`          | Delete an expense                              |
-| GET    | `/api/expenses/search?q=term` | Search expenses by title or comment            |
+| Method | Endpoint                                        | Description                                    |
+|--------|-------------------------------------------------|------------------------------------------------|
+| GET    | `/api/expenses?month=YYYY-MM&category_id=N`     | List expenses for a month, optionally filtered by category |
+| GET    | `/api/expenses/{id}`                            | Get a single expense                           |
+| POST   | `/api/expenses`                                 | Create an expense                              |
+| PUT    | `/api/expenses/{id}`                            | Update an expense                              |
+| DELETE | `/api/expenses/{id}`                            | Delete an expense                              |
+| GET    | `/api/expenses/search?q=term`                   | Search expenses by title or comment            |
 
 ### Categories
 
@@ -146,9 +159,9 @@ All other endpoints require `Authorization: Bearer <token>` header.
 
 ### Analytics
 
-| Method | Endpoint                      | Description                                    |
-|--------|-------------------------------|------------------------------------------------|
-| GET    | `/api/analytics?month=YYYY-MM`| Monthly analytics (or all-time if no month)    |
+| Method | Endpoint                                          | Description                                    |
+|--------|---------------------------------------------------|------------------------------------------------|
+| GET    | `/api/analytics?month=YYYY-MM&period=month\|7days` | Analytics with category breakdown + daily cumulative data |
 
 ### Settings
 
@@ -168,8 +181,10 @@ All other endpoints require `Authorization: Bearer <token>` header.
 
 Semicolon-separated, UTF-8:
 ```
-Title;Date;Amount;Currency;In CHF;Category;Payment Method;City;Country;Comment
-Migros Einkauf;2026-05-13 10:11:38;8.90;CHF;8.90;ToGo Food🍕;;;;
+Title;Date;Amount;Currency;In CHF;Category;Payment Method;Comment
+Migros Einkauf;2026-05-13 10:11:38;8.90;CHF;8.90;ToGo Food🍕;;
 ```
+
+Import tolerates additional columns (City, Country) — they are silently ignored.
 
 @Author Severin Goddon, 2026
