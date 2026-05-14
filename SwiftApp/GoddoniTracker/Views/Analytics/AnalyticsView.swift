@@ -174,12 +174,15 @@ struct AnalyticsView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(GTColor.textPrimary)
                 Spacer()
-                Image(systemName: budgetExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 12))
-                    .foregroundStyle(GTColor.textMuted)
+                if viewModel.period == .month {
+                    Image(systemName: budgetExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12))
+                        .foregroundStyle(GTColor.textMuted)
+                }
             }
             .contentShape(Rectangle())
             .onTapGesture {
+                guard viewModel.period == .month else { return }
                 withAnimation(.easeInOut(duration: 0.25)) { budgetExpanded.toggle() }
             }
 
@@ -227,7 +230,7 @@ struct AnalyticsView: View {
                 }
             }
 
-            if budgetExpanded && !summary.dailyCumulative.isEmpty {
+            if budgetExpanded && viewModel.period == .month && !summary.dailyCumulative.isEmpty {
                 Divider().overlay(GTColor.borderSubtle)
 
                 Text("Monatsverlauf")
@@ -271,65 +274,76 @@ struct AnalyticsView: View {
     private func budgetChart(summary: AnalyticsSummary) -> some View {
         let data = summary.dailyCumulative
         let maxDay = daysInCurrentMonth
-        let budget = summary.budget
+        let budget = summary.budget ?? summary.total * 1.5
 
-        return Chart {
-            ForEach(data) { point in
-                if let day = point.day {
-                    LineMark(
-                        x: .value("Tag", day),
-                        y: .value("CHF", point.cumulative)
-                    )
-                    .foregroundStyle(GTColor.accentCyan)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-
-                    AreaMark(
-                        x: .value("Tag", day),
-                        y: .value("CHF", point.cumulative)
-                    )
-                    .foregroundStyle(GTColor.accentCyan.opacity(0.1))
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 16) {
+                Spacer()
+                HStack(spacing: 4) {
+                    Circle().fill(GTColor.accentCyan).frame(width: 6, height: 6)
+                    Text("Aktuell").font(.system(size: 10)).foregroundStyle(GTColor.textMuted)
+                }
+                HStack(spacing: 4) {
+                    Circle().fill(GTColor.accentGreen).frame(width: 6, height: 6)
+                    Text("Budget").font(.system(size: 10)).foregroundStyle(GTColor.textMuted)
                 }
             }
 
-            if let budget {
-                RuleMark(y: .value("Budget", budget))
-                    .foregroundStyle(GTColor.accentRed.opacity(0.5))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-
-                ForEach([1, maxDay], id: \.self) { day in
-                    LineMark(
-                        x: .value("Tag", day),
-                        y: .value("Soll", budget / Double(maxDay) * Double(day))
-                    )
-                    .foregroundStyle(GTColor.textMuted.opacity(0.5))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            Chart {
+                ForEach(data) { point in
+                    if let day = point.day {
+                        LineMark(
+                            x: .value("Tag", day),
+                            y: .value("CHF", point.cumulative),
+                            series: .value("Serie", "Aktuell")
+                        )
+                        .foregroundStyle(GTColor.accentCyan)
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                    }
                 }
+
+                LineMark(
+                    x: .value("Tag", 1),
+                    y: .value("CHF", 0),
+                    series: .value("Serie", "Budget")
+                )
+                .foregroundStyle(GTColor.accentGreen)
+                .lineStyle(StrokeStyle(lineWidth: 1.5))
+
+                LineMark(
+                    x: .value("Tag", maxDay),
+                    y: .value("CHF", budget),
+                    series: .value("Serie", "Budget")
+                )
+                .foregroundStyle(GTColor.accentGreen)
+                .lineStyle(StrokeStyle(lineWidth: 1.5))
             }
-        }
-        .chartXScale(domain: 1...maxDay)
-        .chartYAxis {
-            AxisMarks(position: .leading) { value in
-                AxisValueLabel {
-                    if let v = value.as(Double.self) {
-                        Text("\(Int(v))")
-                            .font(.system(size: 9))
-                            .foregroundStyle(GTColor.textMuted)
+            .chartXScale(domain: 1...maxDay)
+            .chartYScale(domain: 0...budget)
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisValueLabel {
+                        if let v = value.as(Double.self) {
+                            Text("\(Int(v))")
+                                .font(.system(size: 9))
+                                .foregroundStyle(GTColor.textMuted)
+                        }
                     }
                 }
             }
-        }
-        .chartXAxis {
-            AxisMarks(values: .stride(by: 5)) { value in
-                AxisValueLabel {
-                    if let v = value.as(Int.self) {
-                        Text("\(v)")
-                            .font(.system(size: 9))
-                            .foregroundStyle(GTColor.textMuted)
+            .chartXAxis {
+                AxisMarks(values: .stride(by: 5)) { value in
+                    AxisValueLabel {
+                        if let v = value.as(Int.self) {
+                            Text("\(v)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(GTColor.textMuted)
+                        }
                     }
                 }
             }
+            .frame(height: 180)
         }
-        .frame(height: 180)
     }
 
     private var daysInCurrentMonth: Int {
