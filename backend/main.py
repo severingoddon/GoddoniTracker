@@ -27,6 +27,7 @@ from schemas import (
     MonthExpenses,
     AnalyticsSummary,
     CategoryBreakdown,
+    DailyCumulative,
     UserSettingsResponse,
     UserSettingsUpdate,
 )
@@ -446,6 +447,17 @@ def get_analytics(month: str | None = None, period: str = "month", session: Sess
             percentage=(cat_total / total * 100) if total > 0 else 0,
         ))
 
+    daily_totals: dict[str, float] = {}
+    for e in expenses:
+        day_key = e.date.strftime("%Y-%m-%d")
+        daily_totals[day_key] = daily_totals.get(day_key, 0) + e.amount_in_chf
+
+    daily_cumulative = []
+    cumulative = 0.0
+    for day_key in sorted(daily_totals.keys()):
+        cumulative += daily_totals[day_key]
+        daily_cumulative.append(DailyCumulative(date=day_key, cumulative=cumulative))
+
     return AnalyticsSummary(
         total=total,
         daily_average=daily_average,
@@ -453,6 +465,7 @@ def get_analytics(month: str | None = None, period: str = "month", session: Sess
         budget=budget,
         budget_used_percent=budget_used_percent,
         categories=categories,
+        daily_cumulative=daily_cumulative,
     )
 
 

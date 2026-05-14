@@ -82,6 +82,11 @@ class CategoryBreakdown(BaseModel):
     percentage: float
 
 
+class DailyCumulative(BaseModel):
+    date: str
+    cumulative: float
+
+
 class AnalyticsSummary(BaseModel):
     total: float
     daily_average: float
@@ -89,6 +94,7 @@ class AnalyticsSummary(BaseModel):
     budget: float | None
     budget_used_percent: float | None
     categories: list[CategoryBreakdown]
+    daily_cumulative: list[DailyCumulative] = []
 
 
 # --- Settings ---

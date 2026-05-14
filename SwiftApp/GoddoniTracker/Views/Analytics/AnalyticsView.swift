@@ -1,10 +1,12 @@
 import SwiftUI
+import Charts
 
 struct AnalyticsView: View {
     @Environment(APIClient.self) private var api
     @Environment(\.dismiss) private var dismiss
 
     @State private var viewModel = AnalyticsViewModel()
+    @State private var budgetExpanded = false
 
     var body: some View {
         ZStack {
@@ -14,27 +16,40 @@ struct AnalyticsView: View {
                 VStack(spacing: 20) {
                     periodSelector
 
-                    if viewModel.period == .month {
-                        monthNavigator
-                    }
+                    if let summary = viewModel.summary {
+                        budgetSection(summary: summary)
 
-                    if let summary = viewModel.summary, !viewModel.isLoading {
                         HStack {
                             Text("Total: CHF \(String(format: "%.2f", summary.total))")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(GTColor.accentCyan)
-                            Spacer()
-                        }
-                    }
 
-                    if let summary = viewModel.summary {
+                            Spacer()
+
+                            if viewModel.period == .month {
+                                HStack(spacing: 12) {
+                                    Button { viewModel.goToPreviousMonth() } label: {
+                                        Image(systemName: "chevron.left")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(GTColor.textSecondary)
+                                    }
+                                    Text(viewModel.monthLabel)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(GTColor.textPrimary)
+                                    Button { viewModel.goToNextMonth() } label: {
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(GTColor.textSecondary)
+                                    }
+                                }
+                            }
+                        }
+
                         if !summary.categories.isEmpty {
                             donutChart(categories: summary.categories)
                         }
 
                         categoryList(categories: summary.categories)
-
-                        budgetSection(summary: summary)
                     } else if viewModel.isLoading {
                         ProgressView()
                             .tint(GTColor.accentCyan)
@@ -81,23 +96,6 @@ struct AnalyticsView: View {
         }
     }
 
-    private var monthNavigator: some View {
-        HStack(spacing: 16) {
-            Button { viewModel.goToPreviousMonth() } label: {
-                Image(systemName: "chevron.left")
-                    .foregroundStyle(GTColor.textSecondary)
-            }
-
-            Text(viewModel.monthLabel)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(GTColor.textPrimary)
-
-            Button { viewModel.goToNextMonth() } label: {
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(GTColor.textSecondary)
-            }
-        }
-    }
 
     private func donutChart(categories: [CategoryBreakdown]) -> some View {
         let colors: [Color] = [
@@ -171,9 +169,19 @@ struct AnalyticsView: View {
 
     private func budgetSection(summary: AnalyticsSummary) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Budget")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(GTColor.textPrimary)
+            HStack {
+                Text("Budget")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(GTColor.textPrimary)
+                Spacer()
+                Image(systemName: budgetExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 12))
+                    .foregroundStyle(GTColor.textMuted)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.25)) { budgetExpanded.toggle() }
+            }
 
             if let budget = summary.budget, let usedPercent = summary.budgetUsedPercent {
                 ProgressView(value: min(usedPercent, 100), total: 100)
@@ -218,8 +226,115 @@ struct AnalyticsView: View {
                             ? GTColor.accentRed : GTColor.textPrimary)
                 }
             }
+
+            if budgetExpanded && !summary.dailyCumulative.isEmpty {
+                Divider().overlay(GTColor.borderSubtle)
+
+                Text("Monatsverlauf")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(GTColor.textPrimary)
+
+                budgetChart(summary: summary)
+
+                if let budget = summary.budget {
+                    let allowedPerDay = budget / Double(daysInCurrentMonth)
+                    Divider().overlay(GTColor.borderSubtle)
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Erlaubt pro Tag")
+                                .font(.system(size: 12))
+                                .foregroundStyle(GTColor.textMuted)
+                            Text("CHF \(String(format: "%.2f", allowedPerDay))")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(GTColor.textPrimary)
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("Status")
+                                .font(.system(size: 12))
+                                .foregroundStyle(GTColor.textMuted)
+                            Text(summary.projectedMonthly <= budget ? "Im Rahmen" : "Über Budget")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(summary.projectedMonthly <= budget ? GTColor.accentGreen : GTColor.accentRed)
+                        }
+                    }
+                }
+            }
         }
         .padding(16)
         .cardStyle()
+    }
+
+    private func budgetChart(summary: AnalyticsSummary) -> some View {
+        let data = summary.dailyCumulative
+        let maxDay = daysInCurrentMonth
+        let budget = summary.budget
+
+        return Chart {
+            ForEach(data) { point in
+                if let day = point.day {
+                    LineMark(
+                        x: .value("Tag", day),
+                        y: .value("CHF", point.cumulative)
+                    )
+                    .foregroundStyle(GTColor.accentCyan)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+
+                    AreaMark(
+                        x: .value("Tag", day),
+                        y: .value("CHF", point.cumulative)
+                    )
+                    .foregroundStyle(GTColor.accentCyan.opacity(0.1))
+                }
+            }
+
+            if let budget {
+                RuleMark(y: .value("Budget", budget))
+                    .foregroundStyle(GTColor.accentRed.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+
+                ForEach([1, maxDay], id: \.self) { day in
+                    LineMark(
+                        x: .value("Tag", day),
+                        y: .value("Soll", budget / Double(maxDay) * Double(day))
+                    )
+                    .foregroundStyle(GTColor.textMuted.opacity(0.5))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                }
+            }
+        }
+        .chartXScale(domain: 1...maxDay)
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisValueLabel {
+                    if let v = value.as(Double.self) {
+                        Text("\(Int(v))")
+                            .font(.system(size: 9))
+                            .foregroundStyle(GTColor.textMuted)
+                    }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .stride(by: 5)) { value in
+                AxisValueLabel {
+                    if let v = value.as(Int.self) {
+                        Text("\(v)")
+                            .font(.system(size: 9))
+                            .foregroundStyle(GTColor.textMuted)
+                    }
+                }
+            }
+        }
+        .frame(height: 180)
+    }
+
+    private var daysInCurrentMonth: Int {
+        let cal = Calendar.current
+        let d = viewModel.currentMonth
+        return cal.range(of: .day, in: .month, for: d)?.count ?? 30
     }
 }
