@@ -20,10 +20,6 @@
       ansible.builtin.shell: docker images --filter "reference=*goddonitracker*" -q | xargs -r docker rmi -f 2>/dev/null || true
       changed_when: false
 
-    - name: Remove GoddoniTracker volumes
-      ansible.builtin.shell: docker volume ls -q --filter "name=goddonitracker" | xargs -r docker volume rm 2>/dev/null || true
-      changed_when: false
-
     - name: Build from scratch
       community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"

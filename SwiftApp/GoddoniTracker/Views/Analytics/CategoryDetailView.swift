@@ -92,7 +92,7 @@ struct CategoryDetailView: View {
 
     private func load() async {
         isLoading = true
-        monthExpenses = try? await api.getExpenses(month: month, categoryId: categoryId)
+        monthExpenses = try? await api.getExpenses(month: month, categoryId: categoryId ?? 0)
         isLoading = false
     }
 

@@ -259,7 +259,10 @@ def get_expenses(month: str | None = None, category_id: int | None = None, sessi
 
     query = db.query(Expense).filter(Expense.user_id == user_id, Expense.date >= start, Expense.date <= end)
     if category_id is not None:
-        query = query.filter(Expense.category_id == category_id)
+        if category_id == 0:
+            query = query.filter(Expense.category_id.is_(None))
+        else:
+            query = query.filter(Expense.category_id == category_id)
 
     expenses = query.order_by(Expense.date.desc()).all()
 
