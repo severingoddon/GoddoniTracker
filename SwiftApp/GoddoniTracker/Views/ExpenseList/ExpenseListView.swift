@@ -97,6 +97,7 @@ struct ExpenseListView: View {
             }
             .padding(.horizontal, 16)
         }
+        .scrollDismissesKeyboard(.immediately)
     }
 
     private func expenseList(data: MonthExpenses) -> some View {
@@ -123,7 +124,7 @@ struct ExpenseListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.immediately)
     }
 
     private func dayHeader(day: DayGroup) -> some View {

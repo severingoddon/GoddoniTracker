@@ -9,7 +9,12 @@ struct ExpenseFormView: View {
     @State private var showNewCategory = false
     @State private var newCategoryName = ""
     @State private var showDeleteConfirm = false
-    @FocusState private var amountFocused: Bool
+    @State private var showCategoryPicker = false
+    @FocusState private var focusedField: FormField?
+
+    enum FormField {
+        case title, amount, amountInCHF, paymentMethod, comment
+    }
 
     var expense: ExpenseModel?
     var onSaved: () -> Void
@@ -25,6 +30,7 @@ struct ExpenseFormView: View {
                         formSection("Titel") {
                             TextField("z.B. Migros Einkauf", text: $viewModel.title)
                                 .foregroundStyle(GTColor.textPrimary)
+                                .focused($focusedField, equals: .title)
                         }
 
                         HStack(spacing: 12) {
@@ -32,7 +38,7 @@ struct ExpenseFormView: View {
                                 TextField("0.00", text: $viewModel.amount)
                                     .keyboardType(.decimalPad)
                                     .foregroundStyle(GTColor.textPrimary)
-                                    .focused($amountFocused)
+                                    .focused($focusedField, equals: .amount)
                             }
 
                             formSection("Währung") {
@@ -53,25 +59,24 @@ struct ExpenseFormView: View {
                                 TextField("0.00", text: $viewModel.amountInCHF)
                                     .keyboardType(.decimalPad)
                                     .foregroundStyle(GTColor.textPrimary)
+                                    .focused($focusedField, equals: .amountInCHF)
                             }
                         }
 
                         formSection("Kategorie") {
                             HStack {
-                                Menu {
-                                    Button("Keine") { viewModel.selectedCategoryId = nil }
-                                    ForEach(categories) { cat in
-                                        Button(cat.name) { viewModel.selectedCategoryId = cat.id }
-                                    }
+                                Button {
+                                    focusedField = nil
+                                    showCategoryPicker = true
                                 } label: {
                                     HStack {
                                         Text(selectedCategoryName)
                                             .foregroundStyle(GTColor.accentCyan)
                                             .lineLimit(1)
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .font(.system(size: 10))
-                                            .foregroundStyle(GTColor.accentCyan)
                                         Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(GTColor.textMuted)
                                     }
                                     .contentShape(Rectangle())
                                 }
@@ -83,6 +88,12 @@ struct ExpenseFormView: View {
                                         .foregroundStyle(GTColor.accentCyan)
                                 }
                             }
+                        }
+                        .navigationDestination(isPresented: $showCategoryPicker) {
+                            CategoryPickerView(
+                                categories: categories,
+                                selectedCategoryId: $viewModel.selectedCategoryId
+                            )
                         }
 
                         formSection("Datum") {
@@ -96,11 +107,13 @@ struct ExpenseFormView: View {
                         formSection("Zahlungsmethode") {
                             TextField("z.B. Karte, Twint, Bar", text: $viewModel.paymentMethod)
                                 .foregroundStyle(GTColor.textPrimary)
+                                .focused($focusedField, equals: .paymentMethod)
                         }
 
                         formSection("Kommentar") {
                             TextField("Optional", text: $viewModel.comment)
                                 .foregroundStyle(GTColor.textPrimary)
+                                .focused($focusedField, equals: .comment)
                         }
 
                         Button {
@@ -135,9 +148,9 @@ struct ExpenseFormView: View {
                     }
                     .padding(16)
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.immediately)
                 .onTapGesture {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    focusedField = nil
                 }
             }
             .navigationTitle(viewModel.isEditing ? "Ausgabe bearbeiten" : "Neue Ausgabe")
@@ -170,10 +183,15 @@ struct ExpenseFormView: View {
                 if let expense {
                     viewModel.populate(from: expense)
                 } else {
-                    amountFocused = true
+                    focusedField = .amount
                 }
                 Task {
                     categories = (try? await api.getCategories()) ?? []
+                }
+            }
+            .onChange(of: showCategoryPicker) {
+                if !showCategoryPicker {
+                    focusedField = nil
                 }
             }
             .alert("Neue Kategorie", isPresented: $showNewCategory) {

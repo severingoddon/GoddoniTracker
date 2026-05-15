@@ -240,7 +240,7 @@ struct AnalyticsView: View {
                 budgetChart(summary: summary)
 
                 if let budget = summary.budget {
-                    let allowedPerDay = budget / Double(daysInCurrentMonth)
+                    let allowedPerDay = (budget - summary.total) / Double(remainingDaysInMonth)
                     Divider().overlay(GTColor.borderSubtle)
 
                     HStack {
@@ -250,7 +250,7 @@ struct AnalyticsView: View {
                                 .foregroundStyle(GTColor.textMuted)
                             Text("CHF \(String(format: "%.2f", allowedPerDay))")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(GTColor.textPrimary)
+                                .foregroundStyle(allowedPerDay < 0 ? GTColor.accentRed : GTColor.textPrimary)
                         }
 
                         Spacer()
@@ -350,5 +350,14 @@ struct AnalyticsView: View {
         let cal = Calendar.current
         let d = viewModel.currentMonth
         return cal.range(of: .day, in: .month, for: d)?.count ?? 30
+    }
+
+    private var remainingDaysInMonth: Int {
+        let cal = Calendar.current
+        let now = Date()
+        if cal.isDate(viewModel.currentMonth, equalTo: now, toGranularity: .month) {
+            return max(1, daysInCurrentMonth - cal.component(.day, from: now) + 1)
+        }
+        return daysInCurrentMonth
     }
 }
