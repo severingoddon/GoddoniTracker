@@ -10,6 +10,7 @@ struct ExpenseFormView: View {
     @State private var newCategoryName = ""
     @State private var showDeleteConfirm = false
     @State private var showCategoryPicker = false
+    @State private var showDatePicker = false
     @FocusState private var focusedField: FormField?
 
     enum FormField {
@@ -50,6 +51,7 @@ struct ExpenseFormView: View {
                                 }
                                 .pickerStyle(.menu)
                                 .tint(GTColor.accentCyan)
+                                .frame(height: 20)
                             }
                             .frame(width: 100)
                         }
@@ -97,11 +99,24 @@ struct ExpenseFormView: View {
                         }
 
                         formSection("Datum") {
-                            DatePicker("", selection: $viewModel.date)
-                                .datePickerStyle(.compact)
-                                .tint(GTColor.accentCyan)
-                                .labelsHidden()
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Button {
+                                focusedField = nil
+                                showDatePicker = true
+                            } label: {
+                                HStack {
+                                    Text(viewModel.date, format: .dateTime.day().month(.wide).year())
+                                    Text(viewModel.date, format: .dateTime.hour().minute())
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(GTColor.textMuted)
+                                }
+                                .foregroundStyle(GTColor.textPrimary)
+                                .contentShape(Rectangle())
+                            }
+                        }
+                        .navigationDestination(isPresented: $showDatePicker) {
+                            DatePickerView(date: $viewModel.date)
                         }
 
                         formSection("Zahlungsmethode") {
@@ -217,14 +232,14 @@ struct ExpenseFormView: View {
         return "Keine"
     }
 
-    private func formSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    private func formSection<Content: View>(_ title: String, verticalPadding: CGFloat = 10, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(GTColor.textSecondary)
             content()
                 .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.vertical, verticalPadding)
                 .background(GTColor.bgCard)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
