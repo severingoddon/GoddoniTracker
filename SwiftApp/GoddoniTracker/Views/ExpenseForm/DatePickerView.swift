@@ -8,16 +8,12 @@ struct DatePickerView: View {
         ZStack {
             GTColor.bgDeepest.ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                DatePicker("", selection: $date, displayedComponents: [.date])
-                    .datePickerStyle(.graphical)
-                    .tint(GTColor.accentCyan)
-                    .labelsHidden()
+            VStack(spacing: 32) {
+                Spacer()
 
-                DatePicker("Uhrzeit", selection: $date, displayedComponents: [.hourAndMinute])
-                    .labelsHidden()
+                DatePicker("", selection: $date)
                     .datePickerStyle(.wheel)
-                    .frame(height: 120)
+                    .labelsHidden()
 
                 Spacer()
 

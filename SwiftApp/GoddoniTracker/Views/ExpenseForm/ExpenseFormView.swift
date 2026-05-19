@@ -195,9 +195,9 @@ struct ExpenseFormView: View {
                 }
             }
             .onAppear {
-                if let expense {
+                if let expense, !viewModel.isEditing {
                     viewModel.populate(from: expense)
-                } else {
+                } else if expense == nil {
                     focusedField = .amount
                 }
                 Task {
