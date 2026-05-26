@@ -57,8 +57,8 @@ class ExpenseResponse(BaseModel):
     category_name: str | None = None
     payment_method: str | None
     comment: str | None
-    split_applied: bool
-    split_factor: float | None
+    split_applied: bool = False
+    split_factor: float | None = None
 
     model_config = {"from_attributes": True}
 
