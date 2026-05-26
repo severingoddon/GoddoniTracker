@@ -336,6 +336,8 @@ def create_expense(data: ExpenseCreate, session: SessionModel = Depends(get_curr
         category_id=data.category_id,
         payment_method=data.payment_method,
         comment=data.comment,
+        split_applied=data.split_applied,
+        split_factor=data.split_factor,
         user_id=session.user.id,
     )
     db.add(expense)
@@ -363,6 +365,8 @@ def update_expense(expense_id: int, data: ExpenseCreate, session: SessionModel =
     expense.category_id = data.category_id
     expense.payment_method = data.payment_method
     expense.comment = data.comment
+    expense.split_applied = data.split_applied
+    expense.split_factor = data.split_factor
     db.commit()
     db.refresh(expense)
     return expense_to_response(expense)
@@ -511,7 +515,7 @@ def export_csv(date_from: str | None = None, date_to: str | None = None, session
 
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";")
-    writer.writerow(["Title", "Date", "Amount", "Currency", "In CHF", "Category", "Payment Method", "Comment"])
+    writer.writerow(["Title", "Date", "Amount", "Currency", "In CHF", "Category", "Payment Method", "Comment", "Split Applied", "Split Factor"])
 
     for e in expenses:
         writer.writerow([
@@ -523,6 +527,8 @@ def export_csv(date_from: str | None = None, date_to: str | None = None, session
             e.category.name if e.category else "",
             e.payment_method or "",
             e.comment or "",
+            "1" if e.split_applied else "0",
+            f"{e.split_factor:.2f}" if e.split_factor else "",
         ])
 
     output.seek(0)

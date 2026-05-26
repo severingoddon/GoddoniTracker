@@ -232,7 +232,7 @@ struct ExportSheet: View {
         let dateFmt = DateFormatter()
         dateFmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
 
-        var csv = "Title;Date;Amount;Currency;In CHF;Category;Payment Method;Comment\n"
+        var csv = "Title;Date;Amount;Currency;In CHF;Category;Payment Method;Comment;Split Applied;Split Factor\n"
         for e in allExpenses.sorted(by: { $0.date > $1.date }) {
             let line = [
                 e.title,
@@ -243,6 +243,8 @@ struct ExportSheet: View {
                 e.categoryName ?? "",
                 e.paymentMethod ?? "",
                 e.comment ?? "",
+                e.splitApplied ? "1" : "0",
+                e.splitFactor.map { String(format: "%.2f", $0) } ?? "",
             ].joined(separator: ";")
             csv += line + "\n"
         }
