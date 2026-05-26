@@ -237,6 +237,8 @@ def expense_to_response(expense: Expense) -> ExpenseResponse:
         category_name=expense.category.name if expense.category else None,
         payment_method=expense.payment_method,
         comment=expense.comment,
+        split_applied=expense.split_applied or False,
+        split_factor=expense.split_factor,
     )
 
 

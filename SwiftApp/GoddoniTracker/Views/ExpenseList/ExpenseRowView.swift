@@ -20,13 +20,17 @@ struct ExpenseRowView: View {
             Spacer()
 
             if expense.splitApplied, let factor = expense.splitFactor {
-                Text("\(Int(factor * 100))%")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(GTColor.accentCyan)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(GTColor.accentCyan.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                HStack(spacing: 3) {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 10))
+                    Text("\(Int(factor * 100))%")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(GTColor.accentCyan)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(GTColor.accentCyan.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
             }
 
             Text("-\(expense.currency) \(String(format: "%.2f", expense.amount))")
