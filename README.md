@@ -15,7 +15,7 @@ A personal expense tracking application. Track daily expenses, analyze spending 
 - **Budget chart** — expandable cumulative spending chart vs. budget path with daily projection
 - **CSV export** — export expenses for any date range, generated client-side via iOS share sheet
 - **CSV import** — import expenses from CSV with automatic category creation (supports DD.MM.YY, DD.MM.YYYY, YYYY-MM-DD formats)
-- **Multi-currency** — track amounts in any currency with CHF conversion
+- **Multi-currency** — track amounts in any currency with automatic CHF conversion via [frankfurter.app](https://api.frankfurter.app) (ECB rates, no API key required)
 - **Multi-user** — each user has their own categories, expenses, and settings (Google OAuth)
 - **Dark mode** — dark theme throughout
 - **German UI** — all interface text in German, code in English
@@ -28,6 +28,7 @@ A personal expense tracking application. Track daily expenses, analyze spending 
 | Backend  | Python 3.12, FastAPI, SQLAlchemy, Pydantic, Authlib |
 | Database | SQLite                                            |
 | Server   | Nginx (SSL reverse proxy), Uvicorn                |
+| FX Rates | [frankfurter.app](https://api.frankfurter.app) — ECB rates, free, no API key |
 | Docker   | Docker Compose                                    |
 | Deploy   | Ansible                                           |
 

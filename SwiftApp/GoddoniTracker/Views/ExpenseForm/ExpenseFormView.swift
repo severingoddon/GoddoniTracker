@@ -58,10 +58,17 @@ struct ExpenseFormView: View {
 
                         if viewModel.currency != "CHF" {
                             formSection("Betrag in CHF") {
-                                TextField("0.00", text: $viewModel.amountInCHF)
-                                    .keyboardType(.decimalPad)
-                                    .foregroundStyle(GTColor.textPrimary)
-                                    .focused($focusedField, equals: .amountInCHF)
+                                HStack {
+                                    TextField("0.00", text: $viewModel.amountInCHF)
+                                        .keyboardType(.decimalPad)
+                                        .foregroundStyle(GTColor.textPrimary)
+                                        .focused($focusedField, equals: .amountInCHF)
+                                    if viewModel.isLoadingRate {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                            .tint(GTColor.accentCyan)
+                                    }
+                                }
                             }
                         }
 
@@ -117,6 +124,27 @@ struct ExpenseFormView: View {
                         }
                         .navigationDestination(isPresented: $showDatePicker) {
                             DatePickerView(date: $viewModel.date)
+                        }
+
+                        formSection("Anteil bezahlt") {
+                            HStack(spacing: 12) {
+                                Button {
+                                    viewModel.splitHalf.toggle()
+                                    if viewModel.splitHalf { viewModel.splitCustom = "" }
+                                    viewModel.applySplit()
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: viewModel.splitHalf ? "checkmark.square.fill" : "square")
+                                        Text("50%")
+                                    }
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(viewModel.splitHalf ? GTColor.accentCyan : GTColor.textMuted)
+                                }
+
+                                TextField("z.B. 50 oder 0.5", text: $viewModel.splitCustom)
+                                    .keyboardType(.decimalPad)
+                                    .foregroundStyle(GTColor.textPrimary)
+                            }
                         }
 
                         formSection("Zahlungsmethode") {
@@ -202,6 +230,20 @@ struct ExpenseFormView: View {
                 }
                 Task {
                     categories = (try? await api.getCategories()) ?? []
+                }
+            }
+            .onChange(of: viewModel.splitCustom) {
+                if !viewModel.splitCustom.isEmpty {
+                    viewModel.splitHalf = false
+                }
+                viewModel.applySplit()
+            }
+            .onChange(of: viewModel.currency) {
+                Task { await viewModel.convertToCHF() }
+            }
+            .onChange(of: viewModel.amount) {
+                if viewModel.currency != "CHF" {
+                    Task { await viewModel.convertToCHF() }
                 }
             }
             .onChange(of: showCategoryPicker) {
