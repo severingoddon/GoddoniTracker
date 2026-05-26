@@ -11,6 +11,8 @@ struct ExpenseModel: Codable, Identifiable {
     let categoryName: String?
     let paymentMethod: String?
     let comment: String?
+    let splitApplied: Bool
+    let splitFactor: Double?
 }
 
 struct ExpenseCreate: Codable {
@@ -22,6 +24,8 @@ struct ExpenseCreate: Codable {
     let categoryId: Int?
     let paymentMethod: String?
     let comment: String?
+    let splitApplied: Bool
+    let splitFactor: Double?
 }
 
 struct DayGroup: Codable, Identifiable {

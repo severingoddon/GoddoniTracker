@@ -42,6 +42,8 @@ class ExpenseCreate(BaseModel):
     category_id: int | None = None
     payment_method: str | None = None
     comment: str | None = None
+    split_applied: bool = False
+    split_factor: float | None = None
 
 
 class ExpenseResponse(BaseModel):
@@ -55,6 +57,8 @@ class ExpenseResponse(BaseModel):
     category_name: str | None = None
     payment_method: str | None
     comment: str | None
+    split_applied: bool
+    split_factor: float | None
 
     model_config = {"from_attributes": True}
 

@@ -63,6 +63,13 @@ final class ExpenseFormViewModel {
         date = expense.date
         paymentMethod = expense.paymentMethod ?? ""
         comment = expense.comment ?? ""
+        if expense.splitApplied, let factor = expense.splitFactor {
+            if factor == 0.5 {
+                splitHalf = true
+            } else {
+                splitCustom = String(format: "%.0f", factor * 100)
+            }
+        }
     }
 
     func convertToCHF() async {
@@ -111,6 +118,16 @@ final class ExpenseFormViewModel {
             parsedCHF = Double(amountInCHF.replacingOccurrences(of: ",", with: ".")) ?? parsedAmount
         }
 
+        let isSplit = splitHalf || !splitCustom.isEmpty
+        let factor: Double?
+        if splitHalf {
+            factor = 0.5
+        } else if let val = Double(splitCustom.replacingOccurrences(of: ",", with: ".")), val > 0 {
+            factor = val > 1 ? val / 100.0 : val
+        } else {
+            factor = nil
+        }
+
         let expense = ExpenseCreate(
             title: title.trimmingCharacters(in: .whitespaces),
             date: date,
@@ -119,7 +136,9 @@ final class ExpenseFormViewModel {
             amountInChf: parsedCHF,
             categoryId: selectedCategoryId,
             paymentMethod: paymentMethod.isEmpty ? nil : paymentMethod,
-            comment: comment.isEmpty ? nil : comment
+            comment: comment.isEmpty ? nil : comment,
+            splitApplied: isSplit,
+            splitFactor: factor
         )
 
         do {

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -50,6 +50,8 @@ class Expense(Base):
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
     payment_method = Column(String, nullable=True)
     comment = Column(String, nullable=True)
+    split_applied = Column(Boolean, nullable=False, default=False)
+    split_factor = Column(Float, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     user = relationship("User", back_populates="expenses")
