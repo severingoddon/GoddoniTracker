@@ -1,7 +1,7 @@
 import Foundation
 
 enum APIEndpoints {
-    static let baseURL = "https://goddonitracker.goddoni.org:3004"
+    static let baseURL = "https://goddonitracker.goddoni.org"
 
     // Auth
     static let googleLogin = "/api/auth/google/login?platform=ios"

@@ -1,9 +1,18 @@
 ---
+# Deploys only the GoddoniTracker compose project.
+# Never touches other projects on the Pi (e.g. WeekBite):
+# no global "docker rmi", "docker volume rm" or "docker ... prune".
 - name: Deploy GoddoniTracker to Raspi
   hosts: raspi
   vars:
     project_dir: ~/GoddoniTracker/GoddoniTracker
     repo_url: https://github.com/severingoddon/GoddoniTracker.git
+    backup_dir: ~/GoddoniTracker/backups
+    # Must match the volume name in docker-compose.yml
+    db_volume: goddonitracker_db-data
+    # Only these images are removed before the rebuild (nginx:alpine is shared, keep it)
+    tracker_images:
+      - goddonitracker-backend
 
   tasks:
     - name: Pull latest code
@@ -11,14 +20,45 @@
       args:
         chdir: "{{ project_dir }}"
 
-    - name: Stop containers
+    - name: Check that the DB volume exists
+      ansible.builtin.command: docker volume inspect {{ db_volume }}
+      register: volume_check
+      changed_when: false
+      failed_when: false
+
+    - name: Stop if the DB volume is missing (first deploy -> run with -e first_deploy=true)
+      ansible.builtin.fail:
+        msg: >
+          Volume {{ db_volume }} not found. Deploying now would start with an empty DB.
+          Check "docker volume ls" on the Pi.
+      when: volume_check.rc != 0 and not (first_deploy | default(false) | bool)
+
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Back up database
+      ansible.builtin.shell: >
+        docker cp goddonitracker-backend:/app/data/tracker.db
+        {{ backup_dir }}/tracker-$(date +%Y%m%d-%H%M%S).db
+      register: db_backup
+      changed_when: db_backup.rc == 0
+      failed_when: db_backup.rc != 0 and volume_check.rc == 0
+
+    - name: Stop GoddoniTracker containers (volumes are kept)
       community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         state: absent
+        remove_volumes: false
 
-    - name: Remove GoddoniTracker images
-      ansible.builtin.shell: docker images --filter "reference=*goddonitracker*" -q | xargs -r docker rmi -f 2>/dev/null || true
-      changed_when: false
+    - name: Remove GoddoniTracker images only
+      ansible.builtin.command: docker rmi {{ item }}
+      loop: "{{ tracker_images }}"
+      register: rmi_result
+      changed_when: rmi_result.rc == 0
+      failed_when: false
 
     - name: Build from scratch
       community.docker.docker_compose_v2:
@@ -29,12 +69,20 @@
         COMPOSE_DOCKER_CLI_BUILD: "1"
         DOCKER_BUILDKIT: "1"
 
+    - name: Check that the backend uses the DB volume
+      ansible.builtin.command: >
+        docker inspect goddonitracker-backend
+        --format '{% raw %}{{ range .Mounts }}{{ .Name }} {{ end }}{% endraw %}'
+      register: backend_mounts
+      changed_when: false
+      failed_when: db_volume not in backend_mounts.stdout
+
     - name: Wait for startup
       ansible.builtin.pause:
         seconds: 5
 
     - name: Show backend logs
-      ansible.builtin.command: docker logs goddonitracker-backend --tail 20
+      ansible.builtin.shell: docker logs goddonitracker-backend --tail 20 2>&1
       register: backend_logs
       changed_when: false
 

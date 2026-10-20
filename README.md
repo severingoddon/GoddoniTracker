@@ -70,7 +70,7 @@ open GoddoniTracker.xcodeproj
 
 In Xcode, select your development team under **Signing & Capabilities**, then build to a simulator or device.
 
-The API base URL is configured in `SwiftApp/GoddoniTracker/Network/APIEndpoints.swift`. For local development, change it to `http://localhost:8001`. For production it points to `https://goddonitracker.goddoni.org:3004`.
+The API base URL is configured in `SwiftApp/GoddoniTracker/Network/APIEndpoints.swift`. For local development, change it to `http://localhost:8001`. For production it points to `https://goddonitracker.goddoni.org` (served via Cloudflare Tunnel, no port).
 
 The iOS OAuth flow uses `ASWebAuthenticationSession` with the `goddonitracker://` URL scheme. The backend detects `?platform=ios` on the login endpoint and redirects the OAuth callback to `goddonitracker://auth?token=...`.
 
@@ -109,11 +109,11 @@ cd /Users/severingoddon/Desktop/docs/Coding/PycharmProjects/GoddoniTracker
 ansible-playbook ansible/deploy.yml -i ansible/inventory.ini
 ```
 
-This pulls the latest code on the Raspi, rebuilds GoddoniTracker Docker images (without affecting WeekBite), and restarts the containers.
+This pulls the latest code on the Raspi, backs up the database to `~/GoddoniTracker/backups/`, rebuilds the GoddoniTracker backend image, and restarts the containers. The DB volume `goddonitracker_db-data` is kept, and nothing outside the GoddoniTracker project (e.g. WeekBite) is touched. If the volume does not exist yet (first deploy), run with `-e first_deploy=true`.
 
-### Cloudflare DNS
+### Cloudflare Tunnel
 
-CNAME record for `goddonitracker` pointing to `vpn.goddoni.org` (DNS only, no proxy). The app is served on port `3004` via Nginx with SSL.
+`goddonitracker.goddoni.org` is published via the Cloudflare Tunnel `raspberrypi` (route to `https://127.0.0.1:3004`, Origin Server Name `goddonitracker.goddoni.org`, TLS verification disabled). No router port forwarding is needed. Nginx still serves SSL locally on port `3004`.
 
 ### SSL Certificates
 

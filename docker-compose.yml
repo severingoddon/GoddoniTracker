@@ -1,3 +1,6 @@
+# Fixed project name: images, network and volume names must not depend on the folder name
+name: goddonitracker
+
 services:
   backend:
     build: ./backend
@@ -26,3 +29,4 @@ services:
 
 volumes:
   db-data:
+    name: goddonitracker_db-data
