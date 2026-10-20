@@ -15,6 +15,7 @@ final class ExpenseFormViewModel {
     var errorMessage: String?
     var splitHalf = false
     var splitCustom = ""
+    var splitAbsolute = ""
 
     var editingExpenseId: Int?
 
@@ -53,6 +54,20 @@ final class ExpenseFormViewModel {
         }
     }
 
+    func applyAbsoluteSplit() {
+        guard let absVal = Double(splitAbsolute.replacingOccurrences(of: ",", with: ".")), absVal > 0 else { return }
+
+        if preSplitAmount == nil {
+            preSplitAmount = amount
+        }
+
+        guard let baseVal = Double((preSplitAmount ?? amount).replacingOccurrences(of: ",", with: ".")), baseVal > 0 else { return }
+
+        splitHalf = false
+        splitCustom = String(format: "%.0f", absVal / baseVal * 100)
+        amount = String(format: "%.2f", absVal)
+    }
+
     func populate(from expense: ExpenseModel) {
         editingExpenseId = expense.id
         title = expense.title
@@ -63,7 +78,8 @@ final class ExpenseFormViewModel {
         date = expense.date
         paymentMethod = expense.paymentMethod ?? ""
         comment = expense.comment ?? ""
-        if expense.splitApplied, let factor = expense.splitFactor {
+        if expense.splitApplied, let factor = expense.splitFactor, factor > 0 {
+            preSplitAmount = String(format: "%.2f", expense.amount / factor)
             if factor == 0.5 {
                 splitHalf = true
             } else {
@@ -118,7 +134,6 @@ final class ExpenseFormViewModel {
             parsedCHF = Double(amountInCHF.replacingOccurrences(of: ",", with: ".")) ?? parsedAmount
         }
 
-        let isSplit = splitHalf || !splitCustom.isEmpty
         let factor: Double?
         if splitHalf {
             factor = 0.5
@@ -127,6 +142,7 @@ final class ExpenseFormViewModel {
         } else {
             factor = nil
         }
+        let isSplit = factor != nil && factor != 1.0
 
         let expense = ExpenseCreate(
             title: title.trimmingCharacters(in: .whitespaces),

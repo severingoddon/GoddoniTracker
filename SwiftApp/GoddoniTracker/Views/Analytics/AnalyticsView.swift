@@ -275,6 +275,8 @@ struct AnalyticsView: View {
         let data = summary.dailyCumulative
         let maxDay = daysInCurrentMonth
         let budget = summary.budget ?? summary.total * 1.5
+        let prediction = predictionData(from: data)
+        let yMax = max(budget, prediction.last?.cumulative ?? 0)
 
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 16) {
@@ -286,6 +288,12 @@ struct AnalyticsView: View {
                 HStack(spacing: 4) {
                     Circle().fill(GTColor.accentGreen).frame(width: 6, height: 6)
                     Text("Budget").font(.system(size: 10)).foregroundStyle(GTColor.textMuted)
+                }
+                if !prediction.isEmpty {
+                    HStack(spacing: 4) {
+                        Circle().fill(Color(hex: 0xF59E0B)).frame(width: 6, height: 6)
+                        Text("Vorhersage").font(.system(size: 10)).foregroundStyle(GTColor.textMuted)
+                    }
                 }
             }
 
@@ -317,9 +325,19 @@ struct AnalyticsView: View {
                 )
                 .foregroundStyle(GTColor.accentGreen)
                 .lineStyle(StrokeStyle(lineWidth: 1.5))
+
+                ForEach(0..<prediction.count, id: \.self) { i in
+                    LineMark(
+                        x: .value("Tag", prediction[i].day),
+                        y: .value("CHF", prediction[i].cumulative),
+                        series: .value("Serie", "Vorhersage")
+                    )
+                    .foregroundStyle(Color(hex: 0xF59E0B))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+                }
             }
             .chartXScale(domain: 1...maxDay)
-            .chartYScale(domain: 0...budget)
+            .chartYScale(domain: 0...yMax)
             .chartYAxis {
                 AxisMarks(position: .leading) { value in
                     AxisValueLabel {
@@ -344,6 +362,82 @@ struct AnalyticsView: View {
             }
             .frame(height: 180)
         }
+    }
+
+    private func predictionData(from data: [DailyCumulative]) -> [(day: Int, cumulative: Double)] {
+        let cal = Calendar.current
+        let now = Date()
+        guard cal.isDate(viewModel.currentMonth, equalTo: now, toGranularity: .month) else { return [] }
+
+        let currentDay = cal.component(.day, from: now)
+        let maxDay = daysInCurrentMonth
+        guard currentDay < maxDay else { return [] }
+
+        let sorted = data.compactMap { point -> (day: Int, cumulative: Double)? in
+            guard let day = point.day else { return nil }
+            return (day, point.cumulative)
+        }.sorted { $0.day < $1.day }
+
+        guard sorted.count >= 2 else { return [] }
+
+        var dailySpending: [(weekday: Int, amount: Double)] = []
+        for i in 1..<sorted.count {
+            let dayGap = sorted[i].day - sorted[i - 1].day
+            guard dayGap > 0 else { continue }
+            let spendingPerDay = (sorted[i].cumulative - sorted[i - 1].cumulative) / Double(dayGap)
+            for d in sorted[i - 1].day..<sorted[i].day {
+                var comps = cal.dateComponents([.year, .month], from: viewModel.currentMonth)
+                comps.day = d + 1
+                if let date = cal.date(from: comps) {
+                    let wd = cal.component(.weekday, from: date)
+                    dailySpending.append((weekday: wd, amount: spendingPerDay))
+                }
+            }
+        }
+
+        guard !dailySpending.isEmpty else { return [] }
+
+        var weekdayData: [Int: [Double]] = [:]
+        for entry in dailySpending {
+            weekdayData[entry.weekday, default: []].append(entry.amount)
+        }
+        var weekdayAvg: [Int: Double] = [:]
+        for (wd, amounts) in weekdayData {
+            weekdayAvg[wd] = amounts.reduce(0, +) / Double(amounts.count)
+        }
+
+        let n = dailySpending.count
+        var wSum = 0.0, wTotal = 0.0
+        for (i, entry) in dailySpending.enumerated() {
+            let w = exp(Double(i - n + 1) * 0.3)
+            wSum += entry.amount * w
+            wTotal += w
+        }
+        let weightedAvg = wTotal > 0 ? wSum / wTotal : 0
+
+        let weekdayWeight = min(Double(n) / 14.0, 0.4)
+
+        let lastPoint = sorted.last!
+        var result: [(day: Int, cumulative: Double)] = [(lastPoint.day, lastPoint.cumulative)]
+        var cumulative = lastPoint.cumulative
+
+        for day in (lastPoint.day + 1)...maxDay {
+            var comps = cal.dateComponents([.year, .month], from: viewModel.currentMonth)
+            comps.day = day
+
+            var predicted = weightedAvg
+            if let date = cal.date(from: comps) {
+                let wd = cal.component(.weekday, from: date)
+                if let wdAvg = weekdayAvg[wd] {
+                    predicted = weightedAvg * (1 - weekdayWeight) + wdAvg * weekdayWeight
+                }
+            }
+
+            cumulative += max(0, predicted)
+            result.append((day: day, cumulative: cumulative))
+        }
+
+        return result
     }
 
     private var daysInCurrentMonth: Int {

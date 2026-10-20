@@ -127,10 +127,13 @@ struct ExpenseFormView: View {
                         }
 
                         formSection("Anteil bezahlt") {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 10) {
                                 Button {
                                     viewModel.splitHalf.toggle()
-                                    if viewModel.splitHalf { viewModel.splitCustom = "" }
+                                    if viewModel.splitHalf {
+                                        viewModel.splitCustom = ""
+                                        viewModel.splitAbsolute = ""
+                                    }
                                     viewModel.applySplit()
                                 } label: {
                                     HStack(spacing: 4) {
@@ -141,9 +144,28 @@ struct ExpenseFormView: View {
                                     .foregroundStyle(viewModel.splitHalf ? GTColor.accentCyan : GTColor.textMuted)
                                 }
 
-                                TextField("z.B. 50 oder 0.5", text: $viewModel.splitCustom)
-                                    .keyboardType(.decimalPad)
-                                    .foregroundStyle(GTColor.textPrimary)
+                                Divider().frame(height: 18)
+
+                                HStack(spacing: 2) {
+                                    TextField("0", text: $viewModel.splitCustom)
+                                        .keyboardType(.decimalPad)
+                                        .foregroundStyle(GTColor.textPrimary)
+                                        .frame(minWidth: 25)
+                                    Text("%")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(GTColor.textMuted)
+                                }
+
+                                Divider().frame(height: 18)
+
+                                HStack(spacing: 2) {
+                                    TextField("0.00", text: $viewModel.splitAbsolute)
+                                        .keyboardType(.decimalPad)
+                                        .foregroundStyle(GTColor.textPrimary)
+                                    Text(viewModel.currency)
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(GTColor.textMuted)
+                                }
                             }
                         }
 
@@ -237,6 +259,9 @@ struct ExpenseFormView: View {
                     viewModel.splitHalf = false
                 }
                 viewModel.applySplit()
+            }
+            .onChange(of: viewModel.splitAbsolute) {
+                viewModel.applyAbsoluteSplit()
             }
             .onChange(of: viewModel.currency) {
                 Task { await viewModel.convertToCHF() }
