@@ -28,6 +28,8 @@ from schemas import (
     AnalyticsSummary,
     CategoryBreakdown,
     DailyCumulative,
+    CategoryMonthly,
+    CategoryComparison,
     UserSettingsResponse,
     UserSettingsUpdate,
 )
@@ -476,6 +478,54 @@ def get_analytics(month: str | None = None, period: str = "month", session: Sess
         categories=categories,
         daily_cumulative=daily_cumulative,
     )
+
+
+@app.get("/api/analytics/category-comparison", response_model=CategoryComparison)
+def get_category_comparison(month: str | None = None, months: int = 3, session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
+    """Per-category totals for the given month plus the `months` months before it."""
+    user_id = session.user.id
+    if months < 1 or months > 24:
+        raise HTTPException(status_code=400, detail="months must be between 1 and 24.")
+
+    if month:
+        try:
+            year, m = map(int, month.split("-"))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid month format. Use YYYY-MM.")
+    else:
+        today = date.today()
+        year, m = today.year, today.month
+
+    month_keys = []
+    for offset in range(months, -1, -1):
+        idx = year * 12 + (m - 1) - offset
+        month_keys.append(f"{idx // 12:04d}-{idx % 12 + 1:02d}")
+
+    first_year, first_month = map(int, month_keys[0].split("-"))
+    start = datetime(first_year, first_month, 1)
+    _, last_day = monthrange(year, m)
+    end = datetime(year, m, last_day, 23, 59, 59)
+    expenses = (
+        db.query(Expense)
+        .filter(Expense.user_id == user_id, Expense.date >= start, Expense.date <= end)
+        .all()
+    )
+
+    position = {key: i for i, key in enumerate(month_keys)}
+    cat_amounts: dict[int | None, list[float]] = {}
+    cat_names: dict[int | None, str] = {}
+    for e in expenses:
+        if e.category_id not in cat_amounts:
+            cat_amounts[e.category_id] = [0.0] * len(month_keys)
+            cat_names[e.category_id] = e.category.name if e.category else "Ohne Kategorie"
+        cat_amounts[e.category_id][position[e.date.strftime("%Y-%m")]] += e.amount_in_chf
+
+    categories = [
+        CategoryMonthly(category_id=cat_id, category_name=cat_names[cat_id], amounts=amounts)
+        for cat_id, amounts in sorted(cat_amounts.items(), key=lambda x: sum(x[1]), reverse=True)
+    ]
+
+    return CategoryComparison(months=month_keys, categories=categories)
 
 
 # --- Settings ---

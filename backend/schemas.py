@@ -101,6 +101,17 @@ class AnalyticsSummary(BaseModel):
     daily_cumulative: list[DailyCumulative] = []
 
 
+class CategoryMonthly(BaseModel):
+    category_id: int | None
+    category_name: str
+    amounts: list[float]
+
+
+class CategoryComparison(BaseModel):
+    months: list[str]
+    categories: list[CategoryMonthly]
+
+
 # --- Settings ---
 
 

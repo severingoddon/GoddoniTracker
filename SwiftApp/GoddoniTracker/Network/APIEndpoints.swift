@@ -19,6 +19,7 @@ enum APIEndpoints {
 
     // Analytics
     static let analytics = "/api/analytics"
+    static let categoryComparison = "/api/analytics/category-comparison"
 
     // Settings
     static let settings = "/api/settings"

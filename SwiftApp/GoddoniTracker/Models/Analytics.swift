@@ -31,3 +31,16 @@ struct AnalyticsSummary: Codable {
     let categories: [CategoryBreakdown]
     let dailyCumulative: [DailyCumulative]
 }
+
+struct CategoryMonthly: Codable, Identifiable {
+    let categoryId: Int?
+    let categoryName: String
+    let amounts: [Double]
+
+    var id: String { categoryName }
+}
+
+struct CategoryComparison: Codable {
+    let months: [String]
+    let categories: [CategoryMonthly]
+}

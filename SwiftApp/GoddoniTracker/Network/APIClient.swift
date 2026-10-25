@@ -187,6 +187,15 @@ final class APIClient {
         return try await perform(request)
     }
 
+    func getCategoryComparison(month: String, months: Int) async throws -> CategoryComparison {
+        let queryItems = [
+            URLQueryItem(name: "month", value: month),
+            URLQueryItem(name: "months", value: String(months)),
+        ]
+        let request = try makeRequest("GET", path: APIEndpoints.categoryComparison, queryItems: queryItems)
+        return try await perform(request)
+    }
+
     // MARK: - Settings
 
     func getSettings() async throws -> UserSettingsModel {

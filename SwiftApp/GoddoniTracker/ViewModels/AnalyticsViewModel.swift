@@ -13,6 +13,13 @@ final class AnalyticsViewModel {
     var errorMessage: String?
     var currentMonth = Date()
     var period: AnalyticsPeriod = .month
+    var comparison: CategoryComparison?
+    var comparisonMonths = 3
+
+    /// Month the category comparison is anchored to: the selected month, otherwise the current one.
+    var comparisonAnchor: Date {
+        period == .month ? currentMonth : Date()
+    }
 
     var monthLabel: String {
         currentMonth.monthYearString
@@ -35,6 +42,18 @@ final class AnalyticsViewModel {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+        await loadComparison(api: api)
+    }
+
+    func loadComparison(api: APIClient) async {
+        do {
+            comparison = try await api.getCategoryComparison(
+                month: comparisonAnchor.monthKey,
+                months: comparisonMonths
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func goToPreviousMonth() {

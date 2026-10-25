@@ -50,6 +50,14 @@ struct AnalyticsView: View {
                         }
 
                         categoryList(categories: summary.categories)
+
+                        if let comparison = viewModel.comparison {
+                            CategoryComparisonSection(
+                                comparison: comparison,
+                                months: $viewModel.comparisonMonths
+                            )
+                            .padding(.top, 12)
+                        }
                     } else if viewModel.isLoading {
                         ProgressView()
                             .tint(GTColor.accentCyan)
@@ -75,6 +83,9 @@ struct AnalyticsView: View {
         }
         .onChange(of: viewModel.period) {
             Task { await viewModel.load(api: api) }
+        }
+        .onChange(of: viewModel.comparisonMonths) {
+            Task { await viewModel.loadComparison(api: api) }
         }
     }
 
