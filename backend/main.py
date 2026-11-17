@@ -200,6 +200,18 @@ def create_category(data: CategoryCreate, session: SessionModel = Depends(get_cu
     return cat
 
 
+# Must be registered before "/api/categories/{category_id}", otherwise "reorder" is parsed as an id.
+@app.put("/api/categories/reorder")
+def reorder_categories(data: CategoryReorder, session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
+    cats = db.query(Category).filter(Category.user_id == session.user.id).all()
+    cat_map = {c.id: c for c in cats}
+    for i, cat_id in enumerate(data.order):
+        if cat_id in cat_map:
+            cat_map[cat_id].sort_order = i
+    db.commit()
+    return {"detail": "Reordered"}
+
+
 @app.put("/api/categories/{category_id}", response_model=CategoryResponse)
 def update_category(category_id: int, data: CategoryCreate, session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
     cat = db.query(Category).filter(Category.id == category_id, Category.user_id == session.user.id).first()
@@ -222,17 +234,6 @@ def delete_category(category_id: int, session: SessionModel = Depends(get_curren
     db.delete(cat)
     db.commit()
     return {"detail": "Category deleted"}
-
-
-@app.put("/api/categories/reorder")
-def reorder_categories(data: CategoryReorder, session: SessionModel = Depends(get_current_session), db: DBSession = Depends(get_db)):
-    cats = db.query(Category).filter(Category.user_id == session.user.id).all()
-    cat_map = {c.id: c for c in cats}
-    for i, cat_id in enumerate(data.order):
-        if cat_id in cat_map:
-            cat_map[cat_id].sort_order = i
-    db.commit()
-    return {"detail": "Reordered"}
 
 
 # --- Expenses ---
