@@ -1,60 +1,155 @@
+<div align="center">
+
 # GoddoniTracker
 
-A personal expense tracking application. Track daily expenses, analyze spending by category, set monthly budgets with visual projections, and export/import data via CSV.
+**A native iOS expense tracker with a self-hosted Python backend.**
+
+Log expenses in any currency, split shared costs, and see where your money goes with budget projections and category trends.
+
+[![Backend tests](https://github.com/severingoddon/GoddoniTracker/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/severingoddon/GoddoniTracker/actions/workflows/backend-tests.yml)
+![Swift](https://img.shields.io/badge/Swift-5-F05138?logo=swift&logoColor=white)
+![SwiftUI](https://img.shields.io/badge/SwiftUI-iOS%2017+-0D96F6?logo=apple&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?logo=fastapi&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Ansible](https://img.shields.io/badge/Ansible-deploy-EE0000?logo=ansible&logoColor=white)
+
+</div>
+
+---
+
+## About
+
+GoddoniTracker is a personal finance app I built and use every day. It has a SwiftUI client with no third-party dependencies and a FastAPI backend that runs in Docker on a Raspberry Pi at home. The backend is reachable from anywhere through a Cloudflare Tunnel, without opening any ports on the router.
+
+The UI is in German. Code, comments and docs are in English.
 
 ## Features
 
-- **Expense tracking** — log expenses with title, amount, currency, category, payment method, and comments
-- **Monthly view** — expenses grouped by day with daily and monthly totals
-- **Swipe to delete** — swipe left on any expense to delete, or use the trash icon when editing
-- **Search** — find expenses by title or comment, dismiss keyboard with "Fertig" button
-- **Categories** — customizable categories with emoji support, drag-to-reorder, per-user
-- **Category drill-down** — tap a category in analytics to see all its expenses
-- **Analytics** — donut chart breakdown by category, three time periods: Monat / 7 Tage / Gesamt
-- **Budget tracking** — set a monthly budget, track usage percentage, see projected overspend
-- **Budget chart** — expandable cumulative spending chart vs. budget path with daily projection
-- **CSV export** — export expenses for any date range, generated client-side via iOS share sheet
-- **CSV import** — import expenses from CSV with automatic category creation (supports DD.MM.YY, DD.MM.YYYY, YYYY-MM-DD formats)
-- **Multi-currency** — track amounts in any currency with automatic CHF conversion via [frankfurter.app](https://api.frankfurter.app) (ECB rates, no API key required)
-- **Multi-user** — each user has their own categories, expenses, and settings (Google OAuth)
-- **Dark mode** — dark theme throughout
-- **German UI** — all interface text in German, code in English
+### Expenses
+- **Quick entry** with title, amount, currency, category, date, payment method and comment
+- **Monthly view** grouped by day, with daily, monthly and all-time totals and a month navigator
+- **Search** across titles and comments
+- **Swipe to delete**, tap to edit
 
-## Tech Stack
+### Shared costs
+- **Split an expense** in half, by a percentage, or by entering your own share as an absolute amount
+- The original amount is kept, so you can change the split later. Split expenses are marked in the list.
 
-| Layer    | Technology                                        |
-|----------|---------------------------------------------------|
-| iOS      | SwiftUI, Swift Charts, Observation (`@Observable`), async/await, zero dependencies |
-| Backend  | Python 3.12, FastAPI, SQLAlchemy, Pydantic, Authlib |
-| Database | SQLite                                            |
-| Server   | Nginx (SSL reverse proxy), Uvicorn                |
-| FX Rates | [frankfurter.app](https://api.frankfurter.app) — ECB rates, free, no API key |
-| Docker   | Docker Compose                                    |
-| Deploy   | Ansible                                           |
+### Multi-currency
+- Enter amounts in **any currency**. They are converted to CHF automatically using ECB rates from [frankfurter.app](https://frankfurter.app).
+- The original amount and its CHF value are both stored, so historical totals don't change when exchange rates move.
 
-## Getting Started
+### Analytics
+- **Three time ranges:** current month, last 7 days and all time
+- **Donut chart** of spending by category, with amounts and percentages. Tap a category to see all its expenses.
+- **Budget tracking:** usage in percent, daily average, projected month-end total and the amount you can still spend per day
+- **Spending chart:** your cumulative spending against the ideal budget line, with a forecast to the end of the month
+- **Category comparison:** each category's spending this month compared with its average over the previous 3, 6 or 12 months (▲ more / ▼ less)
 
-### Local Development
+### Categories
+- Custom categories with **emoji**, **drag-to-reorder** and rename
+- A default set is created on first login. Categories that still have expenses can't be deleted.
 
-**Backend:**
+### Data
+- **CSV export** for any date range, shared via the iOS share sheet
+- **CSV import** that creates missing categories automatically and accepts several date formats
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph iPhone
+        app["iOS app<br/>SwiftUI · @Observable"]
+    end
+
+    subgraph pi["Raspberry Pi · Docker Compose"]
+        nginx["nginx<br/>TLS"]
+        api["FastAPI<br/>Uvicorn"]
+        db[("SQLite<br/>Docker volume")]
+        nginx -->|internal network| api --> db
+    end
+
+    app -->|"HTTPS · Bearer token"| cf["Cloudflare Tunnel"] --> nginx
+    app -.->|OAuth sign-in| google["Google OAuth"]
+    api -.->|token exchange| google
+    app -.->|exchange rates| fx["frankfurter.app"]
+```
+
+### Engineering highlights
+
+| Area | Approach |
+|---|---|
+| **iOS architecture** | MVVM with the Observation framework (`@Observable`), async/await networking and Swift Charts. No third-party packages. |
+| **Authentication** | Google OAuth through `ASWebAuthenticationSession` and a custom URL scheme. The backend issues an opaque session token, which the app stores in the **Keychain**. A `401` signs the user out automatically. |
+| **Access control** | Only Google accounts in an `ALLOWED_EMAILS` allowlist can sign in. Their email must be verified. If the list is empty, nobody can sign in. Every query is scoped to the authenticated user. |
+| **Money handling** | Each expense stores the original amount and currency together with its CHF value at entry time. Splits keep the factor, so they can be reversed. |
+| **Network exposure** | The backend container has no published port and is only reachable through nginx. The tunnel makes outbound connections only, so the router needs no inbound ports. |
+| **Safe deployments** | The Ansible playbook backs up the database before every deploy. It refuses to run if the data volume is missing and checks the volume mount afterwards. It only touches this project's containers and images, because the Pi also runs other services. |
+| **Testing** | The backend has a pytest suite that runs against an isolated in-memory database per test, with the Google OAuth round trip mocked. It covers auth and the allowlist, per-user data isolation, CRUD, analytics math and the CSV round trip. It runs on every push via GitHub Actions. |
+| **Configuration** | Secrets and host details live in gitignored files (`backend/.env`, `ansible/inventory.ini`). The repo only contains `*.example` templates. |
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| **iOS** | Swift, SwiftUI, Swift Charts, Observation, Keychain Services, XcodeGen |
+| **Backend** | Python 3.12, FastAPI, SQLAlchemy 2, Pydantic 2, Authlib |
+| **Database** | SQLite on a persistent Docker volume |
+| **Infrastructure** | Docker Compose, nginx, Cloudflare Tunnel, Raspberry Pi |
+| **Deployment** | Ansible |
+
+## Project structure
+
+```
+GoddoniTracker/
+├── SwiftApp/
+│   ├── project.yml              # XcodeGen project definition
+│   └── GoddoniTracker/
+│       ├── Auth/                # OAuth session and Keychain storage
+│       ├── Network/             # API client, endpoints, errors
+│       ├── Models/              # Codable API models
+│       ├── ViewModels/          # @Observable view models
+│       ├── Views/               # SwiftUI screens (list, form, analytics, settings)
+│       ├── Theme/               # Colors and reusable styles
+│       └── Extensions/
+├── backend/
+│   ├── main.py                  # FastAPI app and routes
+│   ├── models.py                # SQLAlchemy models
+│   ├── schemas.py               # Pydantic schemas
+│   ├── database.py
+│   └── tests/                   # pytest suite
+├── .github/workflows/           # CI: backend tests
+├── nginx/nginx.conf             # TLS reverse proxy
+├── ansible/deploy.yml           # Deployment playbook
+├── docker-compose.yml
+└── docs/                        # API reference and deployment guide
+```
+
+## Getting started
+
+### Backend
+
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8001
+cp .env.example .env            # then fill in your values
+uvicorn main:app --reload --port 8001
 ```
 
-Copy `backend/.env.example` to `backend/.env` and fill in your values:
+You need a Google OAuth client ([Google Cloud Console](https://console.cloud.google.com/apis/credentials)) with `http://localhost:8001/api/auth/google/callback` as an authorized redirect URI. Add your Google account to `ALLOWED_EMAILS` in `.env`.
+
+Run the tests:
+
 ```bash
-cp .env.example .env
+pip install -r requirements-dev.txt
+pytest
 ```
 
-Only Google accounts listed in `ALLOWED_EMAILS` (comma-separated) can log in. If it is empty, nobody can.
-
-Backend API runs at `http://localhost:8001/api`.
-
-**iOS App:**
+### iOS app
 
 Requires Xcode 16+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
@@ -65,126 +160,17 @@ xcodegen generate
 open GoddoniTracker.xcodeproj
 ```
 
-In Xcode, select your development team under **Signing & Capabilities**, then build to a simulator or device.
+1. Set `baseURL` in `SwiftApp/GoddoniTracker/Network/APIEndpoints.swift` to your backend, e.g. `http://localhost:8001` for the simulator.
+2. Select your development team under **Signing & Capabilities**. If you need to, change the bundle identifier in `project.yml`.
+3. Build and run.
 
-The API base URL is configured in `SwiftApp/GoddoniTracker/Network/APIEndpoints.swift`. For local development, change it to `http://localhost:8001`. For production it points to `https://goddonitracker.goddoni.org` (served via Cloudflare Tunnel, no port).
+## Documentation
 
-The iOS OAuth flow uses `ASWebAuthenticationSession` with the `goddonitracker://` URL scheme. The backend detects `?platform=ios` on the login endpoint and redirects the OAuth callback to `goddonitracker://auth?token=...`.
+- [API reference](docs/API.md): all REST endpoints and the CSV format
+- [Deployment guide](docs/DEPLOYMENT.md): Raspberry Pi, Docker Compose, Ansible, Cloudflare Tunnel, TLS
 
-### Docker (local)
+---
 
-```bash
-docker-compose up --build
-```
-
-Backend available on port `8001`.
-
-### Deployment (Ansible -> Raspberry Pi)
-
-Copy `ansible/inventory.example.ini` to `ansible/inventory.ini` (gitignored) and enter your Raspi's IP.
-
-Prerequisites on your local machine:
-- `ansible` installed (`pip install ansible`)
-- `community.docker` collection: `ansible-galaxy collection install community.docker`
-- SSH key on the Raspi: `ssh-copy-id pi@<RASPI_IP>`
-- Key loaded in agent (if passphrase): `ssh-add ~/.ssh/id_ed25519`
-
-First-time setup on the Raspi:
-```bash
-ssh pi@<RASPI_IP>
-mkdir -p ~/GoddoniTracker/Certs
-cd ~/GoddoniTracker
-git clone https://github.com/severingoddon/GoddoniTracker.git GoddoniTracker
-```
-
-Copy the `.env` file (not in git):
-```bash
-scp backend/.env pi@<RASPI_IP>:~/GoddoniTracker/GoddoniTracker/backend/.env
-```
-
-Deploy (from your Mac):
-```bash
-cd GoddoniTracker
-ansible-playbook ansible/deploy.yml -i ansible/inventory.ini
-```
-
-This pulls the latest code on the Raspi, backs up the database to `~/GoddoniTracker/backups/`, rebuilds the GoddoniTracker backend image, and restarts the containers. The DB volume `goddonitracker_db-data` is kept, and nothing outside the GoddoniTracker project (e.g. WeekBite) is touched. If the volume does not exist yet (first deploy), run with `-e first_deploy=true`.
-
-### Cloudflare Tunnel
-
-`goddonitracker.goddoni.org` is published via the Cloudflare Tunnel `raspberrypi` (route to `https://127.0.0.1:3004`, Origin Server Name `goddonitracker.goddoni.org`, TLS verification disabled). No router port forwarding is needed. Nginx still serves SSL locally on port `3004`.
-
-### SSL Certificates
-
-Generated with Let's Encrypt:
-```bash
-sudo certbot certonly --standalone -d goddonitracker.goddoni.org
-sudo cp /etc/letsencrypt/live/goddonitracker.goddoni.org/fullchain.pem ~/GoddoniTracker/Certs/
-sudo cp /etc/letsencrypt/live/goddonitracker.goddoni.org/privkey.pem ~/GoddoniTracker/Certs/
-sudo chown pi:pi ~/GoddoniTracker/Certs/*.pem
-```
-
-## API Endpoints
-
-### Auth
-
-| Method | Endpoint                     | Description                                      |
-|--------|------------------------------|--------------------------------------------------|
-| GET    | `/api/auth/google/login`     | Redirect to Google OAuth (`?platform=ios` for native app) |
-| GET    | `/api/auth/google/callback`  | OAuth callback, creates session, redirects with token |
-| GET    | `/api/auth/me`               | Get current user info                            |
-
-All other endpoints require `Authorization: Bearer <token>` header.
-
-### Expenses
-
-| Method | Endpoint                                        | Description                                    |
-|--------|-------------------------------------------------|------------------------------------------------|
-| GET    | `/api/expenses?month=YYYY-MM&category_id=N`     | List expenses for a month, optionally filtered by category |
-| GET    | `/api/expenses/{id}`                            | Get a single expense                           |
-| POST   | `/api/expenses`                                 | Create an expense                              |
-| PUT    | `/api/expenses/{id}`                            | Update an expense                              |
-| DELETE | `/api/expenses/{id}`                            | Delete an expense                              |
-| GET    | `/api/expenses/search?q=term`                   | Search expenses by title or comment            |
-
-### Categories
-
-| Method | Endpoint                     | Description                |
-|--------|------------------------------|----------------------------|
-| GET    | `/api/categories`            | List user's categories     |
-| POST   | `/api/categories`            | Create a category          |
-| PUT    | `/api/categories/{id}`       | Rename a category          |
-| DELETE | `/api/categories/{id}`       | Delete a category          |
-| PUT    | `/api/categories/reorder`    | Reorder categories         |
-
-### Analytics
-
-| Method | Endpoint                                          | Description                                    |
-|--------|---------------------------------------------------|------------------------------------------------|
-| GET    | `/api/analytics?month=YYYY-MM&period=month\|7days` | Analytics with category breakdown + daily cumulative data |
-
-### Settings
-
-| Method | Endpoint        | Description                |
-|--------|-----------------|----------------------------|
-| GET    | `/api/settings`  | Get user settings          |
-| PUT    | `/api/settings`  | Update monthly budget      |
-
-### Export / Import
-
-| Method | Endpoint                                       | Description           |
-|--------|------------------------------------------------|-----------------------|
-| GET    | `/api/export?date_from=YYYY-MM-DD&date_to=...` | Download CSV          |
-| POST   | `/api/import`                                  | Upload CSV (multipart)|
-
-### CSV Format
-
-Semicolon-separated, UTF-8:
-```
-Title;Date;Amount;Currency;In CHF;Category;Payment Method;Comment
-Migros Einkauf;2026-05-13 10:11:38;8.90;CHF;8.90;ToGo Food🍕;;
-```
-
-Import tolerates additional columns (City, Country) — they are silently ignored.
-
-@Author Severin Goddon, 2026
+<div align="center">
+Built by <a href="https://github.com/severingoddon">Severin Goddon</a>
+</div>
