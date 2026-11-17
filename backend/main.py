@@ -39,6 +39,13 @@ load_dotenv()
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:8001").split(",")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8001")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "dev-secret-not-for-production")
+# Comma-separated list of Google account emails that may use the backend.
+# Empty or unset = nobody can log in (fail closed).
+ALLOWED_EMAILS = {e.strip().lower() for e in os.getenv("ALLOWED_EMAILS", "").split(",") if e.strip()}
+
+
+def is_email_allowed(email: str | None) -> bool:
+    return bool(email) and email.lower() in ALLOWED_EMAILS
 
 app = FastAPI(title="GoddoniTracker API")
 
@@ -86,6 +93,8 @@ def get_current_session(request: Request, db: DBSession = Depends(get_db)):
     session = db.query(SessionModel).filter(SessionModel.token == token).first()
     if not session:
         raise HTTPException(status_code=401, detail="Invalid session")
+    if not is_email_allowed(session.user.email):
+        raise HTTPException(status_code=403, detail="Access denied")
     return session
 
 
@@ -122,6 +131,8 @@ async def google_callback(request: Request, db: DBSession = Depends(get_db)):
 
     google_id = userinfo["sub"]
     email = userinfo["email"]
+    if not userinfo.get("email_verified") or not is_email_allowed(email):
+        raise HTTPException(status_code=403, detail="Access denied")
     name = userinfo.get("name", "")
     picture = userinfo.get("picture", "")
 

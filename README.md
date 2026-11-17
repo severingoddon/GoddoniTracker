@@ -45,15 +45,12 @@ pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-Create a `.env` file in `backend/` with your configuration:
+Copy `backend/.env.example` to `backend/.env` and fill in your values:
+```bash
+cp .env.example .env
 ```
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-ADMIN_EMAIL=your-admin@example.com
-ALLOWED_ORIGINS=http://localhost:8001
-FRONTEND_URL=http://localhost:8001
-SESSION_SECRET=some-random-secret
-```
+
+Only Google accounts listed in `ALLOWED_EMAILS` (comma-separated) can log in. If it is empty, nobody can.
 
 Backend API runs at `http://localhost:8001/api`.
 
@@ -84,6 +81,8 @@ Backend available on port `8001`.
 
 ### Deployment (Ansible -> Raspberry Pi)
 
+Copy `ansible/inventory.example.ini` to `ansible/inventory.ini` (gitignored) and enter your Raspi's IP.
+
 Prerequisites on your local machine:
 - `ansible` installed (`pip install ansible`)
 - `community.docker` collection: `ansible-galaxy collection install community.docker`
@@ -105,7 +104,7 @@ scp backend/.env pi@<RASPI_IP>:~/GoddoniTracker/GoddoniTracker/backend/.env
 
 Deploy (from your Mac):
 ```bash
-cd /Users/severingoddon/Desktop/docs/Coding/PycharmProjects/GoddoniTracker
+cd GoddoniTracker
 ansible-playbook ansible/deploy.yml -i ansible/inventory.ini
 ```
 
