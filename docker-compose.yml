@@ -7,8 +7,9 @@ services:
     container_name: goddonitracker-backend
     volumes:
       - db-data:/app/data
-    ports:
-      - "8001:8001"
+    # No published port: only reachable through nginx on the internal compose network
+    expose:
+      - "8001"
     env_file:
       - ./backend/.env
     environment:
